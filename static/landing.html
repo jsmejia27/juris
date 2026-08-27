@@ -241,13 +241,15 @@
     <!-- Institutional Top Navigation Bar -->
     <header class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md flex justify-between items-center px-4 sm:px-8 lg:px-12 h-16 border-b border-hairline border-t-2 border-t-gold shadow-sm transition-all duration-300">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-midnight text-gold-light flex items-center justify-center shadow-md shrink-0">
-                <span class="material-symbols-outlined text-xl">balance</span>
-            </div>
-            <a href="/" class="font-serif text-2xl font-bold text-midnight tracking-tight">Juris</a>
-            <span class="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-mono font-medium uppercase bg-amber-50 text-amber-800 border border-amber-200/80 rounded-full">
-                Philippine Legal AI
-            </span>
+            <a href="/" class="flex items-center gap-2.5 group">
+                <img src="/static/juris.png" alt="Juris Logo" class="w-9 h-9 rounded-lg object-cover border border-amber-400/40 shadow-sm group-hover:scale-105 transition-transform" />
+                <div class="flex items-baseline gap-2">
+                    <span class="font-serif text-2xl font-bold text-midnight tracking-tight">Juris</span>
+                    <span class="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-mono font-medium uppercase bg-amber-50 text-amber-800 border border-amber-200/80 rounded-full">
+                        Philippine Legal AI
+                    </span>
+                </div>
+            </a>
         </div>
 
         <nav class="hidden md:flex gap-8 items-center h-full text-xs font-semibold uppercase tracking-wider text-subtext">
@@ -272,9 +274,19 @@
                 <!-- Left Column (5/12): Authority, Framing & Fast Prompts -->
                 <div class="lg:col-span-5 flex flex-col justify-between pt-2">
                     <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-amber-300 text-xs font-mono font-medium mb-6 shadow-inner">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Native Qdrant & Qwen 3.5 9B on RTX 5070 Ti</span>
+                        <!-- Institutional Brand Card with juris.png -->
+                        <div class="flex items-center gap-4 mb-6 p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-2xl border border-slate-800 shadow-md">
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 border-gold/60 shadow-md shrink-0 bg-slate-950">
+                                <img src="/static/juris.png" alt="Juris Philippine Legal AI" class="w-full h-full object-cover" />
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 text-amber-300 text-[11px] font-mono font-semibold uppercase tracking-wider mb-0.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span>Republic of the Philippines</span>
+                                </div>
+                                <h2 class="font-serif text-base sm:text-lg font-bold text-white tracking-tight truncate">Juris Sovereign Legal AI</h2>
+                                <div class="text-[11px] text-slate-400 font-mono">113,010 Records &bull; 2.36M Points &bull; RTX 5070 Ti</div>
+                            </div>
                         </div>
 
                         <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-midnight font-bold leading-[1.15] mb-5 tracking-tight">
@@ -345,8 +357,8 @@
                         <!-- Assistant Header Bar -->
                         <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-7 h-7 rounded-md bg-amber-400/20 text-amber-300 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-base">smart_toy</span>
+                                <div class="w-8 h-8 rounded-lg overflow-hidden border border-amber-400/40 shadow-xs shrink-0 bg-slate-950">
+                                    <img src="/static/juris.png" alt="Juris Legal Assistant" class="w-full h-full object-cover" />
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2">
@@ -807,8 +819,8 @@
     <!-- Institutional Footer -->
     <footer class="w-full py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-xs border-t border-slate-800">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-gold text-lg">balance</span>
+            <div class="flex items-center gap-2.5">
+                <img src="/static/juris.png" alt="Juris" class="w-7 h-7 rounded-md object-cover border border-amber-400/30 shadow-xs" />
                 <span class="font-serif font-bold text-white text-sm">Juris Philippine Legal AI</span>
                 <span class="text-slate-600">|</span>
                 <span>© 2026 Republic of the Philippines Law Intelligence</span>
