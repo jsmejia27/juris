@@ -1,0 +1,38 @@
+# Python Virtual Environments
+legal_ai_env/
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.pytest_cache/
+
+# Large Datasets & Archives (>50MB / Raw Data)
+*.parquet
+*.tar.gz
+*.tar
+*.zip
+*.csv
+*.jsonl
+
+# Native Qdrant DB Data & Storage
+qdrant_server_data/
+qdrant_storage/
+snapshots/
+.qdrant-initialized
+
+# Executables & Binaries
+bin/
+*.exe
+*.dll
+
+# IDE & Tooling Metadata
+.stitch/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

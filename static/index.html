@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris - Philippine Legal Research Workspace</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Playfair Display, Plus Jakarta Sans, JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2pdf.js Bundle CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        midnight: '#0a0f1d',
+                        'midnight-light': '#161e31',
+                        gold: '#b8860b',
+                        'gold-light': '#d4af37',
+                        'gold-subtle': '#fef3c7',
+                        canvas: '#f8fafc',
+                        surface: '#ffffff',
+                        bodytext: '#0f172a',
+                        subtext: '#475569',
+                        hairline: '#e2e8f0',
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Statutory Quote Callout */
+        .quote-callout {
+            background-color: #ffffff;
+            border-left: 4px solid #b8860b;
+            border-top: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 0 12px 12px 0;
+            padding: 12px 16px;
+            margin: 14px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .quote-callout .quote-text {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: #1e293b;
+            font-style: italic;
+        }
+
+        /* Citation Tag Pill */
+        .citation-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin: 2px;
+        }
+        .citation-tag:hover {
+            background-color: #b8860b;
+            border-color: #b8860b;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        /* Inline Citation Pill in Body */
+        .citation-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background-color: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            vertical-align: middle;
+            margin: 0 2px;
+        }
+        .citation-pill:hover {
+            background-color: #b8860b;
+            border-color: #b8860b;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        /* Thinking Collapsible Drawer */
+        .thought-box {
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 0.78rem;
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .thought-box summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #334155;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .thought-box p {
+            margin-top: 8px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        /* Legal Prose Typography */
+        .legal-prose h1, .legal-prose h2, .legal-prose h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: #0a0f1d;
+            font-weight: 700;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.12rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+        }
+        .legal-prose h4 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #b8860b;
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.95rem;
+        }
+        .legal-prose p {
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+            font-size: 0.88rem;
+        }
+        .legal-prose ul, .legal-prose ol {
+            margin: 0.5rem 0 0.8rem 1.2rem;
+        }
+        .legal-prose li {
+            margin-bottom: 0.35rem;
+            list-style-type: disc;
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+        .legal-prose ol > li {
+            list-style-type: decimal;
+        }
+        .legal-prose strong {
+            color: #0a0f1d;
+            font-weight: 700;
+        }
+        .legal-prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.82rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .legal-prose th {
+            background-color: #f1f5f9;
+            color: #0a0f1d;
+            padding: 8px 10px;
+            text-align: left;
+            border: 1px solid #cbd5e1;
+            font-weight: 600;
+        }
+        .legal-prose td {
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 6px;
+            height: 14px;
+            background-color: #b8860b;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-bodytext flex flex-col h-screen overflow-hidden">
+
+    <!-- Top Judicial Header Bar -->
+    <header class="bg-midnight text-white border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2 group">
+                <div class="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <span class="material-symbols-outlined text-lg">gavel</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="font-serif text-xl font-bold text-white tracking-tight">Juris</span>
+                    <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono font-medium uppercase bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full">
+                        Legal Research Workspace
+                    </span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Center Controls: Category Filter & Model Selector -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Corpus Category Filter -->
+            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-amber-400"></i>
+                <select id="corpusCategoryFilter" class="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer">
+                    <option value="" class="bg-slate-900">All Philippine Law</option>
+                    <option value="Republic Act" class="bg-slate-900">Republic Acts (Statutes)</option>
+                    <option value="Jurisprudence" class="bg-slate-900">Supreme Court Cases</option>
+                </select>
+            </div>
+
+            <!-- Model Switcher Dropdown -->
+            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i>
+                <select id="modelSelect" onchange="changeModel(this.value)" class="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer">
+                    <option value="qwen3.5:9b" selected class="bg-slate-900">qwen3.5:9b (Default)</option>
+                    <option value="qwen3:14b" class="bg-slate-900">qwen3:14b</option>
+                    <option value="llama3.2:latest" class="bg-slate-900">llama3.2:latest</option>
+                    <option value="phi4-mini-reasoning:latest" class="bg-slate-900">phi4-mini-reasoning</option>
+                </select>
+            </div>
+
+            <!-- Hardware Badge -->
+            <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>RTX 5070 Ti &bull; Qwen3-Embed 4B</span>
+            </div>
+        </div>
+
+        <!-- Right Controls: Export PDF, Reset & Return to Landing -->
+        <div class="flex items-center gap-2">
+            <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-xs">
+                <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="hidden sm:inline font-medium">Export PDF</span>
+            </button>
+            <button onclick="clearChat()" title="Clear Conversation Session" class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Reset</span>
+            </button>
+            <a href="/" class="px-3 py-1.5 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1 transition-all">
+                <i data-lucide="home" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Home</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container (Maximized Fullscreen) -->
+    <div class="flex-1 flex flex-col max-w-5xl w-full mx-auto p-3 sm:p-5 overflow-hidden">
+
+        <!-- Top Suggested Quick Legal Prompts -->
+        <div class="mb-3 flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1 shrink-0 text-xs font-mono">
+            <span class="text-slate-400 uppercase tracking-wider text-[11px] font-semibold shrink-0 mr-1 flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3 text-gold"></i> Prompts:
+            </span>
+            <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" 
+                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition">
+                Solo Parents Act (RA 11861)
+            </button>
+            <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" 
+                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition">
+                Psychological Incapacity (Tan-Andal)
+            </button>
+            <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" 
+                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition">
+                Cybercrime Online Libel
+            </button>
+            <button onclick="sendQuickPrompt('What is the status of pending absolute divorce and dissolution of marriage bills in the 20th Congress?')" 
+                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition">
+                20th Congress Divorce Bills
+            </button>
+        </div>
+
+        <!-- Chat Messages Scroll Container -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scroll bg-white border border-hairline rounded-2xl shadow-sm">
+            
+            <!-- Welcome Assistant Message Card -->
+            <div class="flex flex-col items-start w-full">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs w-full text-slate-800 text-sm">
+                    <div class="flex items-center gap-2 text-gold font-serif font-bold text-base mb-2">
+                        <span class="material-symbols-outlined text-xl">account_balance</span>
+                        <span>Philippine Legal Research Workspace</span>
+                    </div>
+                    <p class="text-subtext leading-relaxed mb-3.5">
+                        Welcome to the dedicated <strong>Juris Workspace</strong>. Type any legal inquiry, statute reference, docket number (e.g. <em>"G.R. No. 233922"</em>), or doctrine. The engine synthesizes answers strictly grounded in official Philippine law with verbatim statutory excerpts, legal requisites, and live 20th Congress legislative updates.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono text-slate-600 bg-white p-3 rounded-xl border border-slate-200">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                            <span>12,000+ Republic Acts</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="scale" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                            <span>66,759 SC Decisions</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="zap" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                            <span>2,821,455 Vector Points</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Active Citation Drawer (Appears when sources are retrieved) -->
+        <div id="sourcesDrawer" class="hidden px-4 py-2.5 bg-slate-100 border-x border-b border-hairline rounded-b-xl text-xs font-mono mt-[-8px] z-10">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="font-semibold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-gold"></i>
+                    Retrieved Legal Authorities (<span id="sourceCount">0</span>)
+                </span>
+                <span class="text-[10px] text-slate-400">Click a badge to inspect full verbatim text</span>
+            </div>
+            <div id="sourceChips" class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto custom-scroll"></div>
+        </div>
+
+        <!-- Fixed Bottom Input Area -->
+        <div class="pt-3 shrink-0">
+            <form id="chatForm" onsubmit="handleSend(event)" class="relative flex items-center gap-2">
+                <div class="relative flex-1">
+                    <input 
+                        id="chatInput" 
+                        type="text" 
+                        placeholder="Ask any Philippine legal inquiry, Republic Act, or case doctrine..."
+                        class="w-full bg-white border border-slate-300 rounded-xl pl-4 pr-10 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition-all shadow-sm"
+                        required 
+                        autocomplete="off"
+                    />
+                    <button type="button" onclick="document.getElementById('chatInput').value=''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <button 
+                    id="sendBtn" 
+                    type="submit" 
+                    class="bg-midnight hover:bg-slate-800 text-gold-light px-6 py-3.5 rounded-xl font-semibold text-xs tracking-wider uppercase flex items-center gap-2 transition-all shadow-md shrink-0 active:scale-95"
+                >
+                    <span>Ask Juris</span>
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Verbatim Citation Modal Inspector -->
+    <div id="citationModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="px-5 py-4 bg-midnight text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gold-light text-lg">menu_book</span>
+                    <h3 id="modalCitationTitle" class="font-serif font-bold text-sm sm:text-base text-white tracking-tight truncate max-w-md">Source Inspector</h3>
+                </div>
+                <button onclick="closeCitationModal()" class="text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="modalCitationBody" class="p-5 overflow-y-auto custom-scroll space-y-4 text-slate-800 text-sm">
+                <!-- Dynamic Content Injected Here -->
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2 shrink-0">
+                <button onclick="closeCitationModal()" class="px-4 py-2 bg-midnight text-white rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-slate-800 transition">
+                    Close Inspector
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        let currentModel = "qwen3.5:9b";
+        let isGenerating = false;
+        let activeSourcesList = [];
+        let chatSessionHistory = [];
+        let sessionTurns = [];
+
+        function changeModel(modelName) {
+            currentModel = modelName;
+        }
+
+        function clearChat() {
+            chatSessionHistory = [];
+            sessionTurns = [];
+            activeSourcesList = [];
+            document.getElementById('sourcesDrawer').classList.add('hidden');
+            document.getElementById('sourceChips').innerHTML = '';
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = `
+                <div class="flex flex-col items-start w-full">
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs w-full text-slate-800 text-sm">
+                        <div class="flex items-center gap-2 text-gold font-serif font-bold text-base mb-2">
+                            <span class="material-symbols-outlined text-xl">account_balance</span>
+                            <span>Philippine Legal Research Workspace</span>
+                        </div>
+                        <p class="text-subtext leading-relaxed">
+                            Conversation session reset. Type any legal question, Republic Act, or Supreme Court doctrine to begin.
+                        </p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('chatInput').focus();
+        }
+
+        function sendQuickPrompt(text) {
+            document.getElementById('chatInput').value = text;
+            handleSend(new Event('submit'));
+        }
+
+        async function handleSend(e) {
+            if (e) e.preventDefault();
+            if (isGenerating) return;
+
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = "";
+            isGenerating = true;
+            document.getElementById('sendBtn').disabled = true;
+
+            const category = document.getElementById('corpusCategoryFilter').value;
+            const container = document.getElementById('messagesContainer');
+
+            // 1. Append User Bubble (Midnight Theme)
+            const userBubble = document.createElement('div');
+            userBubble.className = 'flex justify-end w-full';
+            userBubble.innerHTML = `
+                <div class="bg-midnight text-white px-5 py-3 rounded-2xl rounded-tr-sm text-sm font-medium max-w-[85%] leading-relaxed shadow-sm">
+                    ${escapeHtml(message)}
+                </div>
+            `;
+            container.appendChild(userBubble);
+
+            // 2. Append Assistant Loading Card
+            const assistantWrapper = document.createElement('div');
+            assistantWrapper.className = 'flex flex-col items-start w-full';
+            
+            const assistantCard = document.createElement('div');
+            assistantCard.className = 'bg-white border border-slate-200 rounded-2xl p-5 shadow-sm w-full text-slate-800 text-sm';
+            assistantCard.innerHTML = `
+                <div class="flex items-center gap-2 text-slate-400 text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-gold animate-ping"></span>
+                    <span>Searching Philippine statutory corpus & jurisprudence...</span>
+                </div>
+            `;
+            assistantWrapper.appendChild(assistantCard);
+            container.appendChild(assistantWrapper);
+            container.scrollTop = container.scrollHeight;
+
+            let accumulatedText = "";
+            let accumulatedThought = "";
+            let sources = [];
+            activeSourcesList = [];
+
+            // Add user message to history
+            chatSessionHistory.push({ role: 'user', content: message });
+
+            const currentTurnIdx = sessionTurns.length;
+            const currentTurnData = {
+                turnNumber: currentTurnIdx + 1,
+                userQuery: message,
+                category: category || "All Philippine Law",
+                timestamp: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+                assistantResponse: "",
+                thought: "",
+                sources: []
+            };
+            sessionTurns.push(currentTurnData);
+
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatSessionHistory.slice(0, -1).slice(-6),
+                        category: category || null,
+                        model: currentModel,
+                        temperature: 0.1,
+                        num_ctx: 8192,
+                        top_k: 4
+                    })
+                });
+
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = "";
+
+                assistantCard.innerHTML = ""; // Clear loading message
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); // Keep last partial line
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const dataStr = line.slice(6).trim();
+                            if (!dataStr) continue;
+
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                
+                                if (parsed.type === "sources") {
+                                    sources = parsed.sources || [];
+                                    activeSourcesList = sources;
+                                    renderSourcesDrawer(sources);
+                                } else if (parsed.type === "thought") {
+                                    accumulatedThought += parsed.thought;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                } else if (parsed.type === "token") {
+                                    accumulatedText += parsed.token;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                    container.scrollTop = container.scrollHeight;
+                                } else if (parsed.type === "error") {
+                                    accumulatedText += `\n\n**Error:** ${parsed.error}`;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                }
+                            } catch (err) {
+                                console.error("Error parsing SSE JSON:", err);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                assistantCard.innerHTML = `
+                    <div class="text-rose-600 text-xs font-mono">
+                        <strong>Connection Error:</strong> ${escapeHtml(err.message)}
+                    </div>
+                `;
+            } finally {
+                if (accumulatedText && accumulatedText.trim()) {
+                    chatSessionHistory.push({ role: 'assistant', content: accumulatedText.trim() });
+                    currentTurnData.assistantResponse = accumulatedText.trim();
+                    currentTurnData.thought = accumulatedThought;
+                    currentTurnData.sources = activeSourcesList.slice();
+                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText, currentTurnIdx);
+                }
+                isGenerating = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('chatInput').focus();
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }
+        }
+
+        function renderStreamingOutput(container, thought, text, turnIdx = null) {
+            let html = "";
+
+            if (thought) {
+                html += `
+                    <details class="thought-box" open>
+                        <summary><i data-lucide="brain" class="w-3.5 h-3.5 text-slate-500 inline"></i> <span>Legal Reasoning Trace</span></summary>
+                        <p>${escapeHtml(thought)}</p>
+                    </details>
+                `;
+            }
+
+            if (text) {
+                // Convert [RA XXXX]¹ into citation pills
+                let formatted = text.replace(/\[([A-Za-z0-9\s\.\,\-\–]+)\]([¹²³⁴⁵⁶⁷⁸⁹])/g, function(match, citeText, num) {
+                    return `<span class="citation-pill" onclick="openCitationByText('${citeText.trim()}')">${citeText.trim()} <sup>${num}</sup></span>`;
+                });
+
+                const rawParsed = marked.parse(formatted);
+                const styledHtml = enhanceBlockquotes(rawParsed);
+                html += `<div class="legal-prose text-slate-800">${styledHtml}</div>`;
+            }
+
+            // If turn is finalized, add the action toolbar
+            if (turnIdx !== null) {
+                html += `
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
+                        <div class="flex items-center gap-1.5 text-slate-400">
+                            <i data-lucide="scale" class="w-3.5 h-3.5 text-gold"></i>
+                            <span>Turn ${turnIdx + 1} &bull; Grounded in Law</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyTurnResponse(${turnIdx})" class="px-2.5 py-1 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>Copy</span>
+                            </button>
+                            <button onclick="exportSingleTurnPDF(${turnIdx})" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-lg transition flex items-center gap-1 font-semibold shadow-2xs">
+                                <i data-lucide="download" class="w-3 h-3 text-gold"></i>
+                                <span>Download PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function copyTurnResponse(turnIdx) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn || !turn.assistantResponse) return;
+            navigator.clipboard.writeText(turn.assistantResponse).then(() => {
+                alert("Legal response copied to clipboard!");
+            });
+        }
+
+        function exportSingleTurnPDF(turnIdx) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn) return;
+            exportTurnsToPDF([turn], `Turn_${turnIdx + 1}`);
+        }
+
+        function exportConversationPDF() {
+            if (!sessionTurns || sessionTurns.length === 0) {
+                alert("No active conversation turns to export yet. Ask a legal question to generate a report!");
+                return;
+            }
+            exportTurnsToPDF(sessionTurns, "Full_Session");
+        }
+
+        function exportTurnsToPDF(turns, labelSuffix = "Session") {
+            const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            let turnsHtml = "";
+            turns.forEach((t, i) => {
+                const parsedBody = marked.parse(t.assistantResponse || "No response recorded.");
+                const formattedBody = enhanceBlockquotes(parsedBody);
+
+                let sourcesHtml = "";
+                if (t.sources && t.sources.length > 0) {
+                    const sourcesItems = t.sources.map((s, sIdx) => `
+                        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+                            <td style="padding: 6px 8px; font-weight: bold; color: #0a0f1d;">${sIdx + 1}. [${s.category || 'Law'}] ${s.title || s.law_no || s.gr_no || 'Document'}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.gr_no || s.law_no || 'N/A'}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.date || s.year || 'N/A'}</td>
+                            <td style="padding: 6px 8px; color: #b8860b; font-weight: bold;">${s.score ? (s.score * 100).toFixed(0) + '%' : 'Verified'}</td>
+                        </tr>
+                    `).join("");
+
+                    sourcesHtml = `
+                        <div style="margin-top: 14px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+                            <div style="font-family: 'Playfair Display', serif; font-weight: bold; font-size: 12px; color: #0a0f1d; margin-bottom: 6px;">
+                                CITED STATUTORY AUTHORITIES & PRECEDENTS (${t.sources.length}):
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="background: #f1f5f9; font-size: 10px; text-transform: uppercase; color: #475569;">
+                                        <th style="padding: 4px 8px;">Authority / Statute Title</th>
+                                        <th style="padding: 4px 8px;">Citation / G.R. No.</th>
+                                        <th style="padding: 4px 8px;">Date</th>
+                                        <th style="padding: 4px 8px;">Fidelity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sourcesItems}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                turnsHtml += `
+                    <div style="margin-bottom: 24px; padding: 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px;">
+                            <span style="font-family: 'Playfair Display', serif; font-weight: bold; color: #b8860b; font-size: 13px; text-transform: uppercase;">
+                                INQUIRY TURN ${t.turnNumber || (i + 1)}
+                            </span>
+                            <span style="font-family: monospace; font-size: 10px; color: #64748b;">${t.timestamp || ''}</span>
+                        </div>
+
+                        <!-- User Query Box -->
+                        <div style="background: #0a0f1d; color: #ffffff; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 14px;">
+                            <span style="color: #d4af37; font-family: monospace; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 2px;">USER LEGAL QUERY</span>
+                            ${escapeHtml(t.userQuery)}
+                        </div>
+
+                        <!-- Legal Findings -->
+                        <div style="color: #0f172a; font-size: 12.5px; line-height: 1.65;" class="pdf-prose-content">
+                            ${formattedBody}
+                        </div>
+
+                        <!-- Sources -->
+                        ${sourcesHtml}
+                    </div>
+                `;
+            });
+
+            const printElement = document.createElement('div');
+            printElement.style.padding = "20px";
+            printElement.style.fontFamily = "'Plus Jakarta Sans', Arial, sans-serif";
+            printElement.style.color = "#0f172a";
+            printElement.style.background = "#f8fafc";
+
+            printElement.innerHTML = `
+                <!-- Judicial Report Header -->
+                <div style="border-bottom: 2px solid #0a0f1d; padding-bottom: 14px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 800; color: #0a0f1d; letter-spacing: -0.5px;">
+                                JURIS PHILIPPINE LEGAL AI
+                            </div>
+                            <div style="font-size: 11px; color: #b8860b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
+                                STATUTORY & JURISPRUDENTIAL RESEARCH MEMORANDUM
+                            </div>
+                        </div>
+                        <div style="text-align: right; font-family: monospace; font-size: 10px; color: #475569;">
+                            <div><strong>DATE:</strong> ${dateStr} &bull; ${timeStr}</div>
+                            <div><strong>ENGINE:</strong> ${currentModel}</div>
+                            <div><strong>STATUS:</strong> RETRIEVAL-VERIFIED</div>
+                        </div>
+                    </div>
+
+                    <!-- Metadata Grid -->
+                    <div style="margin-top: 12px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10px; font-family: monospace; color: #334155;">
+                        <div><strong>VERIFIED CORPUS:</strong> 78,759 Docs</div>
+                        <div><strong>VECTOR DATABASE:</strong> Native Qdrant</div>
+                        <div><strong>EMBEDDING:</strong> Qwen3-Embed 4B</div>
+                    </div>
+                </div>
+
+                <!-- Body Content -->
+                <div style="margin-bottom: 20px;">
+                    ${turnsHtml}
+                </div>
+
+                <!-- Judicial Report Footer -->
+                <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 20px; font-size: 9px; color: #64748b; font-family: monospace; line-height: 1.4;">
+                    <strong>LEGAL RESEARCH DISCLAIMER:</strong> This report is synthesized by Juris AI solely for research, academic, and advisory reference based on indexed Philippine Republic Acts and Supreme Court Jurisprudence. It does not constitute formal attorney-client counsel under the Code of Professional Responsibility and Accountability (CPRA).
+                    <div style="margin-top: 4px; text-align: right; color: #94a3b8;">Juris AI Platform &bull; Philippine Legal Corpus</div>
+                </div>
+            `;
+
+            // Trigger html2pdf
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: `Juris_Legal_Memorandum_${labelSuffix}_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(printElement).save();
+        }
+
+        function enhanceBlockquotes(rawHtml) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawHtml, 'text/html');
+
+            const blockquotes = doc.querySelectorAll('blockquote');
+            blockquotes.forEach(bq => {
+                const callout = document.createElement('div');
+                callout.className = 'quote-callout';
+
+                const quoteText = document.createElement('div');
+                quoteText.className = 'quote-text';
+                quoteText.innerHTML = bq.innerHTML;
+
+                callout.appendChild(quoteText);
+                bq.parentNode.replaceChild(callout, bq);
+            });
+
+            return doc.body.innerHTML;
+        }
+
+        function renderSourcesDrawer(sources) {
+            const drawer = document.getElementById('sourcesDrawer');
+            const chipsContainer = document.getElementById('sourceChips');
+            const countEl = document.getElementById('sourceCount');
+
+            if (!sources || sources.length === 0) {
+                drawer.classList.add('hidden');
+                return;
+            }
+
+            countEl.textContent = sources.length;
+            chipsContainer.innerHTML = "";
+
+            sources.forEach((s, idx) => {
+                const tag = document.createElement('button');
+                tag.className = 'citation-tag';
+                const label = s.title || s.law_no || s.gr_no || `Doc ${idx+1}`;
+                const score = s.score ? ` (${(s.score * 100).toFixed(0)}%)` : '';
+                tag.innerHTML = `<span>[${s.category || 'Law'}] ${escapeHtml(label)}${score}</span>`;
+                tag.onclick = () => openCitationModal(idx);
+                chipsContainer.appendChild(tag);
+            });
+
+            drawer.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function openCitationModal(index) {
+            const source = activeSourcesList[index];
+            if (!source) return;
+
+            const modal = document.getElementById('citationModal');
+            const titleEl = document.getElementById('modalCitationTitle');
+            const bodyEl = document.getElementById('modalCitationBody');
+
+            titleEl.textContent = source.title || source.law_no || source.gr_no || 'Document Details';
+
+            bodyEl.innerHTML = `
+                <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono">
+                    <div><strong>Category:</strong> ${source.category || 'Philippine Law'}</div>
+                    <div><strong>Relevance Score:</strong> ${(source.score ? (source.score * 100).toFixed(1) + '%' : 'N/A')}</div>
+                    ${source.law_no ? `<div><strong>Law Number:</strong> ${escapeHtml(source.law_no)}</div>` : ''}
+                    ${source.gr_no ? `<div><strong>G.R. / Bill:</strong> ${escapeHtml(source.gr_no)}</div>` : ''}
+                    ${source.date ? `<div><strong>Date Enacted/Decided:</strong> ${escapeHtml(source.date)}</div>` : ''}
+                    ${source.ponente ? `<div><strong>Ponente / Author:</strong> ${escapeHtml(source.ponente)}</div>` : ''}
+                </div>
+
+                ${source.summary ? `
+                    <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                        <strong>Official Statutory Summary:</strong>
+                        <p class="mt-1">${escapeHtml(source.summary)}</p>
+                    </div>
+                ` : ''}
+
+                ${source.text ? `
+                    <div>
+                        <div class="text-xs font-mono font-bold text-slate-500 uppercase mb-1">Verbatim Statutory / Case Excerpt:</div>
+                        <div class="p-4 bg-slate-900 text-slate-200 border border-slate-800 rounded-xl text-xs font-mono leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">${escapeHtml(source.text)}</div>
+                    </div>
+                ` : ''}
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function openCitationByText(citeText) {
+            const index = activeSourcesList.findIndex(s => {
+                return (s.gr_no && s.gr_no.toLowerCase().includes(citeText.toLowerCase())) ||
+                       (s.title && s.title.toLowerCase().includes(citeText.toLowerCase()));
+            });
+            if (index !== -1) {
+                openCitationModal(index);
+            }
+        }
+
+        function closeCitationModal() {
+            const modal = document.getElementById('citationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Handle URL parameters on load (e.g. /chat?q=...&category=...)
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const initialQuery = params.get('q');
+            const initialCategory = params.get('category');
+
+            if (initialCategory) {
+                document.getElementById('corpusCategoryFilter').value = initialCategory;
+            }
+
+            if (initialQuery && initialQuery.trim()) {
+                document.getElementById('chatInput').value = initialQuery.trim();
+                handleSend(new Event('submit'));
+            } else {
+                document.getElementById('chatInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>

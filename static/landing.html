@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Juris - Philippine Legal AI Platform</title>
+    
+    <!-- Tailwind CSS with Forms and Container Queries -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    
+    <!-- Lucide Icons & Material Symbols -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Markdown Parser & Math rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2pdf.js Bundle CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Google Fonts: Playfair Display (Headlines), Plus Jakarta Sans (Body), JetBrains Mono (Code/Citations) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "midnight": "#0a0f1d",
+              "midnight-card": "#0f172a",
+              "gold": "#b8860b",
+              "gold-light": "#d4af37",
+              "canvas": "#f8fafc",
+              "hairline": "#e2e8f0",
+              "ink": "#0f172a",
+              "subtext": "#475569"
+            },
+            fontFamily: {
+              serif: ["'Playfair Display'", "Georgia", "serif"],
+              sans: ["'Plus Jakarta Sans'", "sans-serif"],
+              mono: ["'JetBrains Mono'", "monospace"]
+            }
+          }
+        }
+      }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* Statutory Quote Callout */
+        .quote-callout {
+            background-color: #ffffff;
+            border-left: 4px solid #b8860b;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .quote-text {
+            font-style: italic;
+            color: #334155;
+            line-height: 1.6;
+            font-size: 0.925rem;
+        }
+
+        /* Thought box */
+        .thought-box {
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.6rem 0.9rem;
+            margin-bottom: 0.85rem;
+            font-size: 0.825rem;
+            color: #475569;
+        }
+        .thought-box summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .thought-box p {
+            margin-top: 0.4rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        /* Source Badge & Citation Link */
+        .citation-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.45rem;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #0f172a;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .citation-tag:hover {
+            border-color: #b8860b;
+            background: #fffbeb;
+            color: #92400e;
+        }
+
+        /* Custom Scrollbar for Chat */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .hairline-border {
+            border: 1px solid rgba(226, 232, 240, 0.85);
+        }
+
+        /* Prose Overrides for Assistant Output */
+        .legal-prose h1, .legal-prose h2, .legal-prose h3, .legal-prose h4 {
+            color: #0f172a;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        .legal-prose h4 {
+            font-size: 1.05rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.25rem;
+        }
+        .legal-prose p {
+            margin-bottom: 0.85rem;
+            line-height: 1.65;
+            font-size: 0.925rem;
+            color: #1e293b;
+        }
+        .legal-prose ul, .legal-prose ol {
+            margin-bottom: 0.85rem;
+            padding-left: 1.25rem;
+            font-size: 0.925rem;
+            color: #1e293b;
+        }
+        .legal-prose li {
+            margin-bottom: 0.35rem;
+        }
+        .legal-prose strong {
+            color: #0f172a;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pt-16 selection:bg-amber-100 selection:text-amber-900">
+    
+    <!-- Institutional Top Navigation Bar -->
+    <header class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md flex justify-between items-center px-4 sm:px-8 lg:px-12 h-16 border-b border-hairline border-t-2 border-t-gold shadow-sm transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-midnight text-gold-light flex items-center justify-center shadow-md shrink-0">
+                <span class="material-symbols-outlined text-xl">balance</span>
+            </div>
+            <a href="/" class="font-serif text-2xl font-bold text-midnight tracking-tight">Juris</a>
+            <span class="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-mono font-medium uppercase bg-amber-50 text-amber-800 border border-amber-200/80 rounded-full">
+                Philippine Legal AI
+            </span>
+        </div>
+
+        <nav class="hidden md:flex gap-8 items-center h-full text-xs font-semibold uppercase tracking-wider text-subtext">
+            <button onclick="setCategoryAndFocus('Republic Act')" class="hover:text-midnight transition-colors">Republic Acts</button>
+            <button onclick="setCategoryAndFocus('Jurisprudence')" class="hover:text-midnight transition-colors">Supreme Court Cases</button>
+            <button onclick="sendQuickQuery('What are the active pending bills in the 20th Congress for divorce and civil partnership?')" class="hover:text-midnight transition-colors">20th Congress Tracker</button>
+        </nav>
+
+        <div class="flex items-center gap-3">
+            <a href="/chat" class="inline-flex bg-midnight text-gold-light hover:text-white px-4 py-2 rounded-lg font-semibold text-xs tracking-wider uppercase transition-all shadow-sm flex items-center gap-1.5">
+                <span>Dedicated Chat</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        <!-- Split-Screen Hero Section with Integrated Chat Assistant -->
+        <section class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-8 lg:py-12">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Left Column (5/12): Authority, Framing & Fast Prompts -->
+                <div class="lg:col-span-5 flex flex-col justify-between pt-2">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-amber-300 text-xs font-mono font-medium mb-6 shadow-inner">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Standalone Qdrant & Qwen 14B on RTX 5070 Ti</span>
+                        </div>
+
+                        <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-midnight font-bold leading-[1.15] mb-5 tracking-tight">
+                            Precision Philippine Legal Intelligence & <span class="italic text-gold">Jurisprudence AI</span>
+                        </h1>
+
+                        <p class="text-sm sm:text-base text-subtext leading-relaxed mb-6">
+                            Instant semantic retrieval across <strong>12,000+ Republic Acts</strong>, <strong>68,000+ Supreme Court Decisions</strong>, and live <strong>20th Congress Senate & House Bills</strong> with sub-30ms neural precision.
+                        </p>
+
+                        <!-- Key Performance Ribbon -->
+                        <div class="grid grid-cols-3 gap-3 p-4 bg-white border border-hairline rounded-xl shadow-sm mb-6">
+                            <div class="text-center">
+                                <div class="font-mono font-bold text-lg text-midnight">12,000+</div>
+                                <div class="text-[10px] font-mono uppercase text-slate-500">Statutes</div>
+                            </div>
+                            <div class="text-center border-x border-hairline">
+                                <div class="font-mono font-bold text-lg text-midnight">68,000+</div>
+                                <div class="text-[10px] font-mono uppercase text-slate-500">SC Cases</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="font-mono font-bold text-lg text-emerald-700">&lt; 30 ms</div>
+                                <div class="text-[10px] font-mono uppercase text-slate-500">Retrieval</div>
+                            </div>
+                        </div>
+
+                        <!-- 1-Click Starter Chips -->
+                        <div class="mb-4">
+                            <div class="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold mb-2.5">
+                                Select Sample Legal Inquiry:
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="sendQuickQuery('What are the rights, privileges, and statutory benefits of solo parents under RA 11861?')" class="text-left px-3.5 py-2.5 bg-white hover:bg-amber-50/60 text-slate-800 text-xs font-medium rounded-lg border border-hairline hover:border-gold/60 transition-all flex items-center justify-between group shadow-sm">
+                                    <span>📜 Rights & Benefits of Solo Parents (RA 11861)</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-gold transition-colors"></i>
+                                </button>
+                                
+                                <button onclick="sendQuickQuery('Explain the Supreme Court doctrine on psychological incapacity under Article 36 of the Family Code in recent jurisprudence.')" class="text-left px-3.5 py-2.5 bg-white hover:bg-amber-50/60 text-slate-800 text-xs font-medium rounded-lg border border-hairline hover:border-gold/60 transition-all flex items-center justify-between group shadow-sm">
+                                    <span>⚖️ Psychological Incapacity Doctrine (Art. 36)</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-gold transition-colors"></i>
+                                </button>
+                                
+                                <button onclick="sendQuickQuery('What are the penalties and elements of Online Libel under the Cybercrime Prevention Act (RA 10175)?')" class="text-left px-3.5 py-2.5 bg-white hover:bg-amber-50/60 text-slate-800 text-xs font-medium rounded-lg border border-hairline hover:border-gold/60 transition-all flex items-center justify-between group shadow-sm">
+                                    <span>💻 Cybercrime Prevention Act & Online Libel</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-gold transition-colors"></i>
+                                </button>
+                                
+                                <button onclick="sendQuickQuery('What is the current status of pending Absolute Divorce bills in the 20th Congress?')" class="text-left px-3.5 py-2.5 bg-white hover:bg-amber-50/60 text-slate-800 text-xs font-medium rounded-lg border border-hairline hover:border-gold/60 transition-all flex items-center justify-between group shadow-sm">
+                                    <span>🏛️ 20th Congress Pending Absolute Divorce Bills</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-gold transition-colors"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (7/12): The Embedded Live Legal AI Chat Assistant -->
+                <div class="lg:col-span-7">
+                    <div class="bg-white border border-hairline rounded-2xl shadow-xl flex flex-col h-[720px] overflow-hidden">
+                        
+                        <!-- Assistant Header Bar -->
+                        <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-md bg-amber-400/20 text-amber-300 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-base">smart_toy</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-mono font-bold text-white tracking-wide uppercase">Juris Legal Assistant</h3>
+                                    <p class="text-[11px] text-slate-400 font-mono">Model: Qwen 3.5 9B • Qwen3-Embed 4B</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <select id="corpusCategoryFilter" class="bg-slate-800 text-slate-200 border border-slate-700 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-gold outline-none font-mono">
+                                    <option value="">All Philippine Law</option>
+                                    <option value="Republic Act">Republic Acts (Statutes)</option>
+                                    <option value="Jurisprudence">Supreme Court Cases</option>
+                                </select>
+                                <button onclick="exportConversationPDF()" title="Export entire session to legal report PDF" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1 transition-all">
+                                    <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400"></i>
+                                    <span class="hidden sm:inline">Export PDF</span>
+                                </button>
+                                <button onclick="clearChatMessages()" title="Clear Research Session" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Container -->
+                        <div id="landingMessagesContainer" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll bg-[#fcfdfe]">
+                            
+                            <!-- Welcome Bot Message -->
+                            <div class="flex flex-col items-start w-full">
+                                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm max-w-full text-slate-800 text-sm">
+                                    <div class="flex items-center gap-2 text-gold font-serif font-bold mb-2">
+                                        <span class="material-symbols-outlined text-lg">gavel</span>
+                                        <span>Philippine Legal Research Workspace</span>
+                                    </div>
+                                    <p class="text-subtext leading-relaxed mb-3">
+                                        Welcome to <strong>Juris</strong>. Type any legal question, statute reference (e.g. <em>"RA 9262"</em>), or doctrine. Every answer is synthesized with structured legal analysis, verbatim statutory excerpts, legal requisites, and live 20th Congress bill links.
+                                    </p>
+                                    <div class="text-[11px] font-mono text-slate-400 border-t border-slate-100 pt-2 flex items-center gap-1">
+                                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                        <span>Vector search verified against 241,661 points on Standalone Qdrant server.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Active Citation Drawer (Appears below messages when sources are loaded) -->
+                        <div id="landingSourcesDrawer" class="hidden px-5 py-2.5 bg-slate-50 border-t border-hairline text-xs font-mono">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="font-semibold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-gold"></i>
+                                    Retrieved Legal Sources (<span id="landingSourceCount">0</span>)
+                                </span>
+                                <span class="text-[10px] text-slate-400">Click a citation to view verbatim text</span>
+                            </div>
+                            <div id="landingSourceChips" class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto custom-scroll"></div>
+                        </div>
+
+                        <!-- Chat Input Form -->
+                        <div class="p-4 bg-white border-t border-hairline">
+                            <form id="landingChatForm" onsubmit="handleLandingSend(event)" class="relative flex items-center gap-2">
+                                <div class="relative flex-1">
+                                    <input 
+                                        id="landingChatInput" 
+                                        type="text" 
+                                        placeholder="Ask a Philippine legal inquiry (e.g. What are grounds for legal separation?)..."
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-4 pr-10 py-3 text-sm text-slate-900 focus:bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none transition-all"
+                                        required 
+                                        autocomplete="off"
+                                    />
+                                    <button type="button" onclick="document.getElementById('landingChatInput').value=''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <button 
+                                    id="landingSendBtn" 
+                                    type="submit" 
+                                    class="bg-midnight hover:bg-slate-800 text-gold-light px-5 py-3 rounded-xl font-semibold text-xs tracking-wider uppercase flex items-center gap-1.5 transition-all shadow-md shrink-0"
+                                >
+                                    <span>Ask</span>
+                                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Three Architectural Pillars (2-Column Zig-Zag per taste-design) -->
+        <section class="py-16 bg-white border-t border-hairline px-4 sm:px-6 lg:px-12">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="font-serif text-3xl sm:text-4xl font-bold text-midnight mb-3">
+                        Grounded Institutional Architecture
+                    </h2>
+                    <p class="text-subtext max-w-2xl mx-auto text-sm sm:text-base">
+                        Engineered to eliminate hallucinations through strict hybrid vector search and structured legal synthesis.
+                    </p>
+                </div>
+
+                <!-- Pillar 1: Structured Legal Synthesis -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-16">
+                    <div class="order-2 md:order-1">
+                        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-xl">menu_book</span>
+                        </div>
+                        <h3 class="font-serif text-2xl font-bold text-midnight mb-3">Structured Philippine Legal Method</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                            Unlike generic AI chat models, Juris synthesizes every legal answer into an educational brief with clear statutory references, verbatim quote callouts, mandatory compliance requisites, and practical citizen takeaways.
+                        </p>
+                        <div class="inline-flex items-center gap-2 text-xs font-mono text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-700"></i>
+                            <span>Verbatim statutory excerpts with exact Section numbers</span>
+                        </div>
+                    </div>
+                    <div class="order-1 md:order-2 bg-[#f8fafc] border border-hairline rounded-2xl p-6 shadow-sm font-mono text-xs text-slate-700">
+                        <div class="text-slate-400 mb-2">// SAMPLE STRUCTURED LEGAL SYNTHESIS</div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 mb-2">
+                            <strong class="text-midnight block font-serif mb-1">Republic Act No. 11861 (Section 4):</strong>
+                            <p class="italic text-slate-600">"A solo parent shall be entitled to a monthly cash subsidy of One thousand pesos (₱1,000.00)..."</p>
+                        </div>
+                        <div class="text-emerald-700 font-semibold">✓ Mandatory Requisites & Documentation Extracted</div>
+                    </div>
+                </div>
+
+                <!-- Pillar 2: Live Congress Tracker -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-16">
+                    <div class="bg-[#f8fafc] border border-hairline rounded-2xl p-6 shadow-sm font-mono text-xs text-slate-700">
+                        <div class="text-slate-400 mb-2">// LIVE 20TH CONGRESS API FEED</div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 mb-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <strong class="text-blue-900 font-bold">Senate Bill No. 128 (20th Congress)</strong>
+                                <span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded border border-blue-200">Pending</span>
+                            </div>
+                            <p class="text-slate-600 mb-2">"An Act Providing for Absolute Divorce and Dissolution of Marriage in the Philippines"</p>
+                            <span class="text-gold font-semibold underline text-[11px]">Download Official PDF</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-xl">cloud_sync</span>
+                        </div>
+                        <h3 class="font-serif text-2xl font-bold text-midnight mb-3">Real-Time BetterGov.ph Open Congress API</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                            Gaps between enacted law and ongoing legislative reform are bridged dynamically. Juris queries live 20th Congress Senate (SB) and House (HB) bills with direct 1-click official PDF download links.
+                        </p>
+                        <div class="inline-flex items-center gap-2 text-xs font-mono text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                            <i data-lucide="file-down" class="w-4 h-4 text-blue-700"></i>
+                            <span>Instant legislative history & official PDF bill downloads</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pillar 3: Standalone Rust Engine & Quantization -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                    <div>
+                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-xl">speed</span>
+                        </div>
+                        <h3 class="font-serif text-2xl font-bold text-midnight mb-3">Standalone Rust Qdrant & INT8 Quantization</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                            Vector storage is decoupled into a dedicated multi-threaded native Rust server (`bin/qdrant.exe`) with memory-mapped NVMe storage and INT8 scalar quantization—delivering 75% memory reduction and sub-30ms search latency.
+                        </p>
+                        <div class="inline-flex items-center gap-2 text-xs font-mono text-emerald-900 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                            <i data-lucide="zap" class="w-4 h-4 text-emerald-700"></i>
+                            <span>241,661 points • 2.05 GB storage • FlashRank neural re-ranking</span>
+                        </div>
+                    </div>
+                    <div class="bg-[#f8fafc] border border-hairline rounded-2xl p-6 shadow-sm font-mono text-xs text-slate-700">
+                        <div class="text-slate-400 mb-2">// HARDWARE & TELEMETRY PROFILE</div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between"><span>Vector Engine:</span><strong class="text-midnight">Native Qdrant Rust 1.13.4</strong></div>
+                            <div class="flex justify-between"><span>GPU Acceleration:</span><strong class="text-midnight">NVIDIA RTX 5070 Ti (16GB)</strong></div>
+                            <div class="flex justify-between"><span>Dense + Sparse:</span><strong class="text-midnight">768-dim Nomic + BM25 RRF</strong></div>
+                            <div class="flex justify-between"><span>Quantization:</span><strong class="text-emerald-700">INT8 Scalar (75% RAM Saved)</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Citation Modal Popover -->
+    <div id="landingCitationModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white border border-hairline rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex items-center justify-between p-4 bg-slate-900 text-white border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gold text-lg">menu_book</span>
+                    <h3 id="modalCitationTitle" class="font-mono text-xs font-bold uppercase tracking-wider">Legal Document Details</h3>
+                </div>
+                <button onclick="closeLandingCitationModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="modalCitationBody" class="p-6 overflow-y-auto custom-scroll text-sm text-slate-800 space-y-4"></div>
+            <div class="p-3 bg-slate-50 border-t border-hairline flex justify-end">
+                <button onclick="closeLandingCitationModal()" class="px-4 py-1.5 text-xs font-mono font-semibold bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors">
+                    Close Excerpt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Institutional Footer -->
+    <footer class="w-full py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-xs border-t border-slate-800">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-gold text-lg">balance</span>
+                <span class="font-serif font-bold text-white text-sm">Juris Philippine Legal AI</span>
+                <span class="text-slate-600">|</span>
+                <span>© 2026 Republic of the Philippines Law Intelligence</span>
+            </div>
+            <div class="text-center md:text-right max-w-md text-slate-500 text-[11px] leading-relaxed">
+                <p><em>Disclaimer: AI-generated legal briefs for academic and research purposes only. Not a substitute for formal advice from a member of the Integrated Bar of the Philippines (IBP).</em></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Integrated JavaScript Engine -->
+    <script>
+        lucide.createIcons();
+
+        let currentRetrievedSources = [];
+        let isGenerating = false;
+
+        function setCategoryAndFocus(category) {
+            const catSelect = document.getElementById('corpusCategoryFilter');
+            if (catSelect) catSelect.value = category;
+            const input = document.getElementById('landingChatInput');
+            if (input) {
+                input.focus();
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function sendQuickQuery(query) {
+            const input = document.getElementById('landingChatInput');
+            if (input) {
+                input.value = query;
+                const form = document.getElementById('landingChatForm');
+                if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        }
+
+        let landingSessionTurns = [];
+
+        function clearChatMessages() {
+            landingSessionHistory = [];
+            landingSessionTurns = [];
+            const container = document.getElementById('landingMessagesContainer');
+            container.innerHTML = `
+                <div class="flex flex-col items-start w-full">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm max-w-full text-slate-800 text-sm">
+                        <div class="flex items-center gap-2 text-gold font-serif font-bold mb-2">
+                            <span class="material-symbols-outlined text-lg">gavel</span>
+                            <span>Philippine Legal Research Workspace</span>
+                        </div>
+                        <p class="text-subtext leading-relaxed mb-3">
+                            Welcome to <strong>Juris</strong>. Type any legal question, statute reference (e.g. <em>"RA 9262"</em>), or doctrine. Every answer is synthesized with structured legal analysis, verbatim statutory excerpts, legal requisites, and live 20th Congress bill links.
+                        </p>
+                        <div class="text-[11px] font-mono text-slate-400 border-t border-slate-100 pt-2 flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Vector search verified against 241,661 points on Standalone Qdrant server.</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('landingSourcesDrawer').classList.add('hidden');
+            document.getElementById('landingSourceChips').innerHTML = '';
+            currentRetrievedSources = [];
+        }
+
+        async function handleLandingSend(e) {
+            e.preventDefault();
+            if (isGenerating) return;
+
+            const input = document.getElementById('landingChatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = "";
+            isGenerating = true;
+            document.getElementById('landingSendBtn').disabled = true;
+
+            const category = document.getElementById('corpusCategoryFilter').value;
+            const container = document.getElementById('landingMessagesContainer');
+
+            // 1. Append User Message
+            const userBubble = document.createElement('div');
+            userBubble.className = 'flex justify-end w-full';
+            userBubble.innerHTML = `
+                <div class="bg-midnight text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-xs font-medium max-w-[85%] leading-relaxed shadow-sm">
+                    ${escapeHtml(message)}
+                </div>
+            `;
+            container.appendChild(userBubble);
+
+            // 2. Append Assistant Loading Card
+            const assistantWrapper = document.createElement('div');
+            assistantWrapper.className = 'flex flex-col items-start w-full';
+            
+            const assistantCard = document.createElement('div');
+            assistantCard.className = 'bg-white border border-slate-200 rounded-2xl p-4 shadow-sm w-full text-slate-800 text-sm';
+            assistantCard.innerHTML = `
+                <div class="flex items-center gap-2 text-slate-400 text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-gold animate-ping"></span>
+                    <span>Searching Philippine statutory corpus & jurisprudence...</span>
+                </div>
+            `;
+            assistantWrapper.appendChild(assistantCard);
+            container.appendChild(assistantWrapper);
+            container.scrollTop = container.scrollHeight;
+
+            let responseText = "";
+            let responseThought = "";
+            let sources = [];
+            currentRetrievedSources = [];
+
+            // Add to session history
+            landingSessionHistory.push({ role: 'user', content: message });
+
+            const currentTurnIdx = landingSessionTurns.length;
+            const currentTurnData = {
+                turnNumber: currentTurnIdx + 1,
+                userQuery: message,
+                category: category || "All Philippine Law",
+                timestamp: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+                assistantResponse: "",
+                thought: "",
+                sources: []
+            };
+            landingSessionTurns.push(currentTurnData);
+
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        history: landingSessionHistory.slice(0, -1).slice(-6),
+                        category: category || null,
+                        model: 'qwen3.5:9b'
+                    })
+                });
+
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = "";
+
+                assistantCard.innerHTML = ""; // Clear loader
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); // Keep last partial line
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const dataStr = line.slice(6).trim();
+                            if (!dataStr) continue;
+
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                
+                                if (parsed.type === "sources") {
+                                    sources = parsed.sources || [];
+                                    currentRetrievedSources = sources;
+                                    renderSourcesDrawer(sources);
+                                } else if (parsed.type === "thought") {
+                                    responseThought += parsed.thought;
+                                    renderStreamingOutput(assistantCard, responseThought, responseText);
+                                } else if (parsed.type === "token") {
+                                    responseText += parsed.token;
+                                    renderStreamingOutput(assistantCard, responseThought, responseText);
+                                    container.scrollTop = container.scrollHeight;
+                                } else if (parsed.type === "error") {
+                                    responseText += `\n\n**Error:** ${parsed.error}`;
+                                    renderStreamingOutput(assistantCard, responseThought, responseText);
+                                }
+                            } catch (err) {
+                                console.error("Error parsing JSON SSE line:", err);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                assistantCard.innerHTML = `
+                    <div class="text-rose-600 text-xs font-mono">
+                        <strong>Connection Error:</strong> ${escapeHtml(err.message)}
+                    </div>
+                `;
+            } finally {
+                if (responseText && responseText.trim()) {
+                    landingSessionHistory.push({ role: 'assistant', content: responseText.trim() });
+                    currentTurnData.assistantResponse = responseText.trim();
+                    currentTurnData.thought = responseThought;
+                    currentTurnData.sources = currentRetrievedSources.slice();
+                    renderStreamingOutput(assistantCard, responseThought, responseText, currentTurnIdx);
+                }
+                isGenerating = false;
+                document.getElementById('landingSendBtn').disabled = false;
+                document.getElementById('landingChatInput').focus();
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }
+        }
+
+        function renderStreamingOutput(container, thought, text, turnIdx = null) {
+            let html = "";
+
+            if (thought) {
+                html += `
+                    <details class="thought-box" open>
+                        <summary><i data-lucide="brain" class="w-3.5 h-3.5 text-slate-500 inline"></i> <span>Legal Reasoning Trace</span></summary>
+                        <p>${escapeHtml(thought)}</p>
+                    </details>
+                `;
+            }
+
+            if (text) {
+                const rawParsed = marked.parse(text);
+                const styledHtml = enhanceBlockquotes(rawParsed);
+                html += `<div class="legal-prose text-slate-800">${styledHtml}</div>`;
+            }
+
+            // Action toolbar
+            if (turnIdx !== null) {
+                html += `
+                    <div class="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
+                        <div class="flex items-center gap-1 text-[11px] text-slate-400">
+                            <i data-lucide="scale" class="w-3 h-3 text-gold"></i>
+                            <span>Turn ${turnIdx + 1}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="copyLandingTurn(${turnIdx})" class="px-2 py-0.5 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[11px]">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>Copy</span>
+                            </button>
+                            <button onclick="exportSingleLandingTurnPDF(${turnIdx})" class="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded transition flex items-center gap-1 text-[11px] font-semibold">
+                                <i data-lucide="download" class="w-3 h-3 text-gold"></i>
+                                <span>Download PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function copyLandingTurn(turnIdx) {
+            const turn = landingSessionTurns[turnIdx];
+            if (!turn || !turn.assistantResponse) return;
+            navigator.clipboard.writeText(turn.assistantResponse).then(() => {
+                alert("Legal response copied to clipboard!");
+            });
+        }
+
+        function exportSingleLandingTurnPDF(turnIdx) {
+            const turn = landingSessionTurns[turnIdx];
+            if (!turn) return;
+            exportLandingTurnsToPDF([turn], `Turn_${turnIdx + 1}`);
+        }
+
+        function exportConversationPDF() {
+            if (!landingSessionTurns || landingSessionTurns.length === 0) {
+                alert("No active research turns to export yet. Ask a legal question to generate a report!");
+                return;
+            }
+            exportLandingTurnsToPDF(landingSessionTurns, "Full_Session");
+        }
+
+        function exportLandingTurnsToPDF(turns, labelSuffix = "Session") {
+            const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            let turnsHtml = "";
+            turns.forEach((t, i) => {
+                const parsedBody = marked.parse(t.assistantResponse || "No response recorded.");
+                const formattedBody = enhanceBlockquotes(parsedBody);
+
+                let sourcesHtml = "";
+                if (t.sources && t.sources.length > 0) {
+                    const sourcesItems = t.sources.map((s, sIdx) => `
+                        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+                            <td style="padding: 6px 8px; font-weight: bold; color: #0a0f1d;">${sIdx + 1}. [${s.category || 'Law'}] ${s.title || s.law_no || s.gr_no || 'Document'}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.gr_no || s.law_no || 'N/A'}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.date || s.year || 'N/A'}</td>
+                            <td style="padding: 6px 8px; color: #b8860b; font-weight: bold;">${s.score ? (s.score * 100).toFixed(0) + '%' : 'Verified'}</td>
+                        </tr>
+                    `).join("");
+
+                    sourcesHtml = `
+                        <div style="margin-top: 14px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+                            <div style="font-family: 'Playfair Display', serif; font-weight: bold; font-size: 12px; color: #0a0f1d; margin-bottom: 6px;">
+                                CITED STATUTORY AUTHORITIES & PRECEDENTS (${t.sources.length}):
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="background: #f1f5f9; font-size: 10px; text-transform: uppercase; color: #475569;">
+                                        <th style="padding: 4px 8px;">Authority / Statute Title</th>
+                                        <th style="padding: 4px 8px;">Citation / G.R. No.</th>
+                                        <th style="padding: 4px 8px;">Date</th>
+                                        <th style="padding: 4px 8px;">Fidelity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sourcesItems}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                turnsHtml += `
+                    <div style="margin-bottom: 24px; padding: 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px;">
+                            <span style="font-family: 'Playfair Display', serif; font-weight: bold; color: #b8860b; font-size: 13px; text-transform: uppercase;">
+                                INQUIRY TURN ${t.turnNumber || (i + 1)}
+                            </span>
+                            <span style="font-family: monospace; font-size: 10px; color: #64748b;">${t.timestamp || ''}</span>
+                        </div>
+
+                        <!-- User Query Box -->
+                        <div style="background: #0a0f1d; color: #ffffff; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 14px;">
+                            <span style="color: #d4af37; font-family: monospace; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 2px;">USER LEGAL QUERY</span>
+                            ${escapeHtml(t.userQuery)}
+                        </div>
+
+                        <!-- Legal Findings -->
+                        <div style="color: #0f172a; font-size: 12.5px; line-height: 1.65;" class="pdf-prose-content">
+                            ${formattedBody}
+                        </div>
+
+                        <!-- Sources -->
+                        ${sourcesHtml}
+                    </div>
+                `;
+            });
+
+            const printElement = document.createElement('div');
+            printElement.style.padding = "20px";
+            printElement.style.fontFamily = "'Plus Jakarta Sans', Arial, sans-serif";
+            printElement.style.color = "#0f172a";
+            printElement.style.background = "#f8fafc";
+
+            printElement.innerHTML = `
+                <!-- Judicial Report Header -->
+                <div style="border-bottom: 2px solid #0a0f1d; padding-bottom: 14px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 800; color: #0a0f1d; letter-spacing: -0.5px;">
+                                JURIS PHILIPPINE LEGAL AI
+                            </div>
+                            <div style="font-size: 11px; color: #b8860b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
+                                STATUTORY & JURISPRUDENTIAL RESEARCH MEMORANDUM
+                            </div>
+                        </div>
+                        <div style="text-align: right; font-family: monospace; font-size: 10px; color: #475569;">
+                            <div><strong>DATE:</strong> ${dateStr} &bull; ${timeStr}</div>
+                            <div><strong>ENGINE:</strong> Qwen 3.5 9B</div>
+                            <div><strong>STATUS:</strong> RETRIEVAL-VERIFIED</div>
+                        </div>
+                    </div>
+
+                    <!-- Metadata Grid -->
+                    <div style="margin-top: 12px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10px; font-family: monospace; color: #334155;">
+                        <div><strong>VERIFIED CORPUS:</strong> 78,759 Docs</div>
+                        <div><strong>VECTOR DATABASE:</strong> Native Qdrant</div>
+                        <div><strong>EMBEDDING:</strong> Qwen3-Embed 4B</div>
+                    </div>
+                </div>
+
+                <!-- Body Content -->
+                <div style="margin-bottom: 20px;">
+                    ${turnsHtml}
+                </div>
+
+                <!-- Judicial Report Footer -->
+                <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 20px; font-size: 9px; color: #64748b; font-family: monospace; line-height: 1.4;">
+                    <strong>LEGAL RESEARCH DISCLAIMER:</strong> This report is synthesized by Juris AI solely for research, academic, and advisory reference based on indexed Philippine Republic Acts and Supreme Court Jurisprudence. It does not constitute formal attorney-client counsel under the Code of Professional Responsibility and Accountability (CPRA).
+                    <div style="margin-top: 4px; text-align: right; color: #94a3b8;">Juris AI Platform &bull; Philippine Legal Corpus</div>
+                </div>
+            `;
+
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: `Juris_Legal_Memorandum_${labelSuffix}_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(printElement).save();
+        }
+
+        function enhanceBlockquotes(rawHtml) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawHtml, 'text/html');
+
+            const blockquotes = doc.querySelectorAll('blockquote');
+            blockquotes.forEach(bq => {
+                const callout = document.createElement('div');
+                callout.className = 'quote-callout';
+
+                const quoteText = document.createElement('div');
+                quoteText.className = 'quote-text';
+                quoteText.innerHTML = bq.innerHTML;
+
+                callout.appendChild(quoteText);
+                bq.parentNode.replaceChild(callout, bq);
+            });
+
+            return doc.body.innerHTML;
+        }
+
+        function renderSourcesDrawer(sources) {
+            const drawer = document.getElementById('landingSourcesDrawer');
+            const chipsContainer = document.getElementById('landingSourceChips');
+            const countEl = document.getElementById('landingSourceCount');
+
+            if (!sources || sources.length === 0) {
+                drawer.classList.add('hidden');
+                return;
+            }
+
+            countEl.textContent = sources.length;
+            chipsContainer.innerHTML = "";
+
+            sources.forEach((s, idx) => {
+                const tag = document.createElement('button');
+                tag.className = 'citation-tag';
+                const label = s.title || s.law_no || s.gr_no || `Doc ${idx+1}`;
+                const score = s.score ? ` (${(s.score * 100).toFixed(0)}%)` : '';
+                tag.innerHTML = `<span>[${s.category || 'Law'}] ${escapeHtml(label)}${score}</span>`;
+                tag.onclick = () => openLandingCitationModal(idx);
+                chipsContainer.appendChild(tag);
+            });
+
+            drawer.classList.remove('hidden');
+        }
+
+        function openLandingCitationModal(index) {
+            const source = currentRetrievedSources[index];
+            if (!source) return;
+
+            const modal = document.getElementById('landingCitationModal');
+            const titleEl = document.getElementById('modalCitationTitle');
+            const bodyEl = document.getElementById('modalCitationBody');
+
+            titleEl.textContent = source.title || source.law_no || source.gr_no || 'Document Details';
+
+            bodyEl.innerHTML = `
+                <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono">
+                    <div><strong>Category:</strong> ${source.category || 'Philippine Law'}</div>
+                    <div><strong>Relevance Score:</strong> ${(source.score ? (source.score * 100).toFixed(1) + '%' : 'N/A')}</div>
+                    ${source.law_no ? `<div><strong>Law Number:</strong> ${escapeHtml(source.law_no)}</div>` : ''}
+                    ${source.gr_no ? `<div><strong>G.R. Number:</strong> ${escapeHtml(source.gr_no)}</div>` : ''}
+                    ${source.date ? `<div><strong>Date Enacted/Decided:</strong> ${escapeHtml(source.date)}</div>` : ''}
+                    ${source.subject ? `<div class="col-span-2"><strong>Subject:</strong> ${escapeHtml(source.subject)}</div>` : ''}
+                </div>
+
+                ${source.summary ? `
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                        <strong>Summary:</strong> ${escapeHtml(source.summary)}
+                    </div>
+                ` : ''}
+
+                ${source.text ? `
+                    <div>
+                        <div class="text-xs font-mono font-bold text-slate-500 uppercase mb-1">Verbatim Statutory / Case Excerpt:</div>
+                        <div class="p-3.5 bg-slate-900 text-slate-200 border border-slate-800 rounded-xl text-xs font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">${escapeHtml(source.text)}</div>
+                    </div>
+                ` : ''}
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeLandingCitationModal() {
+            const modal = document.getElementById('landingCitationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

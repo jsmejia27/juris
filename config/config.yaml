@@ -1,0 +1,10 @@
+storage:
+  storage_path: ./qdrant_server_data
+
+service:
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+  enable_static_content: true
+
+telemetry_disabled: true

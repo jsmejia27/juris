@@ -1,0 +1,11 @@
+langchain
+langchain-community
+langchain-ollama
+langchain-text-splitters
+qdrant-client
+fastembed
+pyarrow
+pandas
+streamlit
+tqdm
+requests

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris AI - Dataset Ingestion & Knowledge Base Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #060911;
+            color: #f1f5f9;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphic Cards */
+        .admin-card {
+            background: #0E1424;
+            border: 1px solid #1B253B;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+        }
+        .admin-card:hover {
+            border-color: #2D3D60;
+        }
+
+        .progress-bar-glow {
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 md:p-10 flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="max-w-7xl w-full mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    Juris Knowledge Base Admin
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 font-mono">Live</span>
+                </h1>
+                <p class="text-xs text-slate-400">Philippine Legal Corpus Indexing & Vector Database Controller</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="/" class="px-4 py-2 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-2 transition">
+                <i data-lucide="message-square" class="w-4 h-4 text-blue-400"></i>
+                <span>Open Chat Assistant</span>
+            </a>
+            <button onclick="fetchStats()" class="p-2 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-slate-300 hover:text-white transition" title="Refresh Statistics">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl w-full mx-auto space-y-8 flex-1">
+
+        <!-- Top Metrics Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Overall Progress -->
+            <div class="admin-card p-5">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                    <span>Overall Ingestion</span>
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div class="text-2xl font-extrabold text-white font-mono" id="statOverallPct">0.0%</div>
+                <div class="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+                    <div id="statOverallBar" class="bg-blue-500 h-2 rounded-full transition-all duration-500 progress-bar-glow" style="width: 0%"></div>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-2 flex justify-between">
+                    <span id="statIngestedDocs">0 docs</span>
+                    <span id="statTotalDocs">/ 114,340 total</span>
+                </div>
+            </div>
+
+            <!-- Vector Points in Qdrant -->
+            <div class="admin-card p-5">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                    <span>Qdrant Vector Chunks</span>
+                    <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div class="text-2xl font-extrabold text-white font-mono" id="statVectorPoints">0</div>
+                <div class="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                    <span>Dense (768) + Sparse BM25</span>
+                </div>
+            </div>
+
+            <!-- Hardware Accelerator -->
+            <div class="admin-card p-5">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                    <span>GPU Accelerator</span>
+                    <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="text-sm font-bold text-slate-200 mt-1">RTX 5070 Ti (16GB)</div>
+                <div class="text-[11px] text-emerald-400 mt-2 font-mono flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>CUDA &bull; Batch Size: 64</span>
+                </div>
+            </div>
+
+            <!-- Database Disk Storage -->
+            <div class="admin-card p-5">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+                    <span>Qdrant Local Storage</span>
+                    <i data-lucide="hard-drive" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div class="text-2xl font-extrabold text-white font-mono" id="statStorageSize">0 MB</div>
+                <div class="text-[11px] text-slate-400 mt-3 font-mono">./qdrant_storage/</div>
+            </div>
+        </div>
+
+        <!-- Live Ingestion Control & Terminal Console -->
+        <div class="admin-card p-6 border-blue-900/40 bg-[#0B101E]">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-blue-400"></i>
+                        <span>Active Ingestion Task Control</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Start asynchronous batch embedding and indexing jobs</p>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div id="jobStatusBadge" class="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-mono">
+                        Status: Idle
+                    </div>
+
+                    <button id="stopJobBtn" onclick="stopIngestion()" class="hidden px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                        <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                        <span>Stop Ingestion</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ingestion Progress Bar (When Active) -->
+            <div id="activeProgressContainer" class="mt-4 hidden">
+                <div class="flex items-center justify-between text-xs text-slate-300 font-mono mb-2">
+                    <span id="activeProgressLabel">Indexing Chunks...</span>
+                    <span id="activeProgressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div id="activeProgressBar" class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Terminal Output Log -->
+            <div class="mt-4 bg-[#05070d] border border-slate-800/90 rounded-xl p-4 font-mono text-xs text-slate-300 h-44 overflow-y-auto space-y-1" id="terminalLogs">
+                <div class="text-slate-500">// Terminal log output will stream here during ingestion...</div>
+            </div>
+        </div>
+
+        <!-- Per-Dataset Management Cards Grid -->
+        <div>
+            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="folder-kanban" class="w-5 h-5 text-indigo-400"></i>
+                <span>Available Legal Datasets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="datasetsGrid">
+                <!-- Dynamically Rendered Dataset Cards -->
+            </div>
+        </div>
+
+        <!-- Danger Zone / Maintenance Tools -->
+        <div class="admin-card p-6 border-red-950/40 bg-red-950/10">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-sm font-bold text-rose-300 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        <span>Database Maintenance & Wipe</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Clear all indexed vector points and reset checkpoints to start clean</p>
+                </div>
+                <button onclick="confirmReset()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-rose-900/20">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Reset Qdrant Database</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Custom Ingestion Modal -->
+    <div id="ingestModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#0E1424] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base" id="modalDatasetTitle">Configure Ingestion Job</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Number of Documents to Ingest</label>
+                    <select id="modalLimit" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="500" selected>500 Documents (Quick Batch)</option>
+                        <option value="1000">1,000 Documents</option>
+                        <option value="2500">2,500 Documents</option>
+                        <option value="5000">5,000 Documents</option>
+                        <option value="10000">10,000 Documents</option>
+                        <option value="all">ALL Available Documents (Full Corpus)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Batch Size (GPU Acceleration)</label>
+                    <select id="modalBatchSize" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="128" selected>128 Chunks (High Throughput - RTX 5070 Ti)</option>
+                        <option value="64">64 Chunks</option>
+                        <option value="32">32 Chunks</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white transition">Cancel</button>
+                <button onclick="submitIngestion()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-blue-900/30">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span>Start Ingestion</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let currentTargetSource = "repacts";
+        let pollTimer = null;
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/manage/stats');
+                const data = await res.json();
+
+                // Top Metrics
+                document.getElementById('statOverallPct').innerText = `${data.overall_percentage}%`;
+                document.getElementById('statOverallBar').style.width = `${Math.min(100, data.overall_percentage)}%`;
+                document.getElementById('statIngestedDocs').innerText = `${data.total_ingested_docs.toLocaleString()} docs`;
+                document.getElementById('statTotalDocs').innerText = `/ ${data.total_available_docs.toLocaleString()} total`;
+
+                document.getElementById('statVectorPoints').innerText = data.total_vector_points.toLocaleString();
+                document.getElementById('statStorageSize').innerText = `${(data.storage_size_kb / 1024).toFixed(1)} MB`;
+
+                // Render Dataset Cards
+                renderDatasetCards(data);
+
+                // Update Ingestion Status
+                updateIngestionStatus(data.ingestion_state);
+            } catch (err) {
+                console.error("Error fetching stats:", err);
+            }
+        }
+
+        function renderDatasetCards(data) {
+            const grid = document.getElementById('datasetsGrid');
+            grid.innerHTML = '';
+
+            data.datasets.forEach(ds => {
+                let ingested = 0;
+                let pct = 0;
+
+                if (ds.type.includes('repacts')) {
+                    ingested = data.repacts_ingested;
+                    pct = ((ingested / ds.total_rows) * 100).toFixed(2);
+                } else if (ds.type.includes('juris')) {
+                    ingested = data.juris_ingested;
+                    pct = ((ingested / ds.total_rows) * 100).toFixed(2);
+                } else {
+                    ingested = data.total_ingested_docs;
+                    pct = ((ingested / ds.total_rows) * 100).toFixed(2);
+                }
+
+                const card = document.createElement('div');
+                card.className = 'admin-card p-5 space-y-4';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="font-bold text-white text-sm">${ds.label}</h3>
+                            <div class="text-xs text-slate-400 font-mono mt-0.5">${ds.file} &bull; ${(ds.size_kb / 1024).toFixed(1)} MB</div>
+                        </div>
+                        <span class="text-xs px-2.5 py-1 rounded-full font-mono font-semibold ${pct > 0 ? 'bg-blue-950 border border-blue-800 text-blue-300' : 'bg-slate-800 text-slate-400'}">
+                            ${pct}% Ingested
+                        </span>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-300 font-mono mb-1.5">
+                            <span>Ingested: ${ingested.toLocaleString()}</span>
+                            <span>Total: ${ds.total_rows.toLocaleString()}</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${Math.min(100, pct)}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                        <button onclick="openIngestModal('${ds.type.includes('repacts') ? 'repacts' : (ds.type.includes('juris') ? 'juris' : 'all')}', '${ds.label}')" 
+                                class="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            <span>Ingest More</span>
+                        </button>
+                        <span class="text-[11px] text-slate-500 font-mono">Qdrant Hybrid</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function updateIngestionStatus(state) {
+            if (!state) return;
+
+            const badge = document.getElementById('jobStatusBadge');
+            const stopBtn = document.getElementById('stopJobBtn');
+            const progressContainer = document.getElementById('activeProgressContainer');
+            const progressBar = document.getElementById('activeProgressBar');
+            const progressPct = document.getElementById('activeProgressPercent');
+            const progressLabel = document.getElementById('activeProgressLabel');
+            const terminal = document.getElementById('terminalLogs');
+
+            if (state.status === 'running') {
+                badge.className = 'px-3 py-1 rounded-full bg-blue-950 border border-blue-700 text-blue-300 text-xs font-mono flex items-center gap-1.5';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> Ingestion Running...';
+                stopBtn.classList.remove('hidden');
+                progressContainer.classList.remove('hidden');
+
+                progressBar.style.width = `${state.progress_percent}%`;
+                progressPct.innerText = `${state.progress_percent}%`;
+                progressLabel.innerText = `Indexing Chunks (${state.current_chunk}/${state.total_chunks})`;
+            } else if (state.status === 'completed') {
+                badge.className = 'px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-mono';
+                badge.innerText = 'Status: Completed';
+                stopBtn.classList.add('hidden');
+                progressContainer.classList.add('hidden');
+            } else if (state.status === 'error') {
+                badge.className = 'px-3 py-1 rounded-full bg-rose-950 border border-rose-700 text-rose-300 text-xs font-mono';
+                badge.innerText = 'Status: Error';
+                stopBtn.classList.add('hidden');
+            } else {
+                badge.className = 'px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-mono';
+                badge.innerText = 'Status: Idle';
+                stopBtn.classList.add('hidden');
+                progressContainer.classList.add('hidden');
+            }
+
+            if (state.logs && state.logs.length > 0) {
+                terminal.innerHTML = state.logs.map(l => `<div>&gt; ${escapeHtml(l)}</div>`).join('');
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        }
+
+        function openIngestModal(source, label) {
+            currentTargetSource = source;
+            document.getElementById('modalDatasetTitle').innerText = `Ingest: ${label}`;
+            document.getElementById('ingestModal').classList.remove('hidden');
+            document.getElementById('ingestModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('ingestModal').classList.add('hidden');
+            document.getElementById('ingestModal').classList.remove('flex');
+        }
+
+        async function submitIngestion() {
+            const limitVal = document.getElementById('modalLimit').value;
+            const batchVal = parseInt(document.getElementById('modalBatchSize').value);
+            const limit = limitVal === 'all' ? null : parseInt(limitVal);
+
+            closeModal();
+
+            try {
+                const res = await fetch('/api/manage/ingest/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source: currentTargetSource,
+                        limit: limit,
+                        batch_size: batchVal
+                    })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    fetchStats();
+                } else {
+                    alert(result.error || "Failed to start ingestion");
+                }
+            } catch (err) {
+                alert("Error starting ingestion: " + err.message);
+            }
+        }
+
+        async function stopIngestion() {
+            try {
+                await fetch('/api/manage/ingest/stop', { method: 'POST' });
+                fetchStats();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function confirmReset() {
+            if (confirm("⚠️ Are you sure you want to completely WIPE all indexed vector embeddings and checkpoints from Qdrant? This cannot be undone.")) {
+                try {
+                    const res = await fetch('/api/manage/reset', { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                    fetchStats();
+                } catch (err) {
+                    alert("Error resetting database: " + err.message);
+                }
+            }
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Initialize & Poll
+        fetchStats();
+        pollTimer = setInterval(fetchStats, 2000);
+    </script>
+</body>
+</html>
