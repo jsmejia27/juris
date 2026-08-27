@@ -242,7 +242,7 @@
     <header class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md flex justify-between items-center px-4 sm:px-8 lg:px-12 h-16 border-b border-hairline border-t-2 border-t-gold shadow-sm transition-all duration-300">
         <div class="flex items-center gap-3">
             <a href="/" class="flex items-center gap-2.5 group">
-                <img src="/static/juris.png" alt="Juris Logo" class="w-9 h-9 rounded-lg object-cover border border-amber-400/40 shadow-sm group-hover:scale-105 transition-transform" />
+                <img src="/static/juris.png" alt="Juris Logo" class="w-9 h-9 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
                 <div class="flex items-baseline gap-2">
                     <span class="font-serif text-2xl font-bold text-midnight tracking-tight">Juris</span>
                     <span class="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-mono font-medium uppercase bg-amber-50 text-amber-800 border border-amber-200/80 rounded-full">
@@ -276,7 +276,7 @@
                     <div>
                         <!-- Institutional Brand Card with juris.png -->
                         <div class="flex items-center gap-4 mb-6 p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-2xl border border-slate-800 shadow-md">
-                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 border-gold/60 shadow-md shrink-0 bg-slate-950">
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shadow-md shrink-0 bg-slate-950">
                                 <img src="/static/juris.png" alt="Juris Philippine Legal AI" class="w-full h-full object-cover" />
                             </div>
                             <div class="min-w-0">
@@ -357,7 +357,7 @@
                         <!-- Assistant Header Bar -->
                         <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-lg overflow-hidden border border-amber-400/40 shadow-xs shrink-0 bg-slate-950">
+                                <div class="w-8 h-8 rounded-lg overflow-hidden shadow-xs shrink-0 bg-slate-950">
                                     <img src="/static/juris.png" alt="Juris Legal Assistant" class="w-full h-full object-cover" />
                                 </div>
                                 <div>
@@ -469,7 +469,7 @@
                             <!-- Glowing Aura Frame -->
                             <div class="absolute -inset-1.5 bg-gradient-to-b from-amber-400/40 via-gold/20 to-transparent rounded-3xl blur-md opacity-75 group-hover:opacity-100 transition duration-500"></div>
                             
-                            <div class="relative bg-slate-900 border-2 border-amber-400/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+                            <div class="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
                                 <!-- Character Image Frame -->
                                 <div class="relative h-[440px] sm:h-[480px] w-full overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
                                     <img 
@@ -973,7 +973,7 @@
     <footer class="w-full py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-xs border-t border-slate-800">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-2.5">
-                <img src="/static/juris.png" alt="Juris" class="w-7 h-7 rounded-md object-cover border border-amber-400/30 shadow-xs" />
+                <img src="/static/juris.png" alt="Juris" class="w-7 h-7 rounded-md object-cover shadow-xs" />
                 <span class="font-serif font-bold text-white text-sm">Juris Philippine Legal AI</span>
                 <span class="text-slate-600">|</span>
                 <span>© 2026 Republic of the Philippines Law Intelligence</span>
@@ -997,6 +997,49 @@
         let isGenerating = false;
         let landingSessionHistory = [];
         let landingSessionTurns = [];
+        let cooldownSecondsRemaining = 0;
+        let cooldownInterval = null;
+
+        function startCooldownTimer(seconds = 20) {
+            cooldownSecondsRemaining = seconds;
+            const input = document.getElementById('landingChatInput');
+            const sendBtn = document.getElementById('landingSendBtn');
+            const originalPlaceholder = "Ask any Philippine legal inquiry, Republic Act, or case doctrine...";
+
+            if (input) {
+                input.disabled = true;
+            }
+            if (sendBtn) {
+                sendBtn.disabled = true;
+            }
+
+            if (cooldownInterval) clearInterval(cooldownInterval);
+
+            function updateCooldownUI() {
+                if (cooldownSecondsRemaining > 0) {
+                    if (input) input.placeholder = `⏳ Please wait ${cooldownSecondsRemaining}s before next legal inquiry...`;
+                    if (sendBtn) sendBtn.innerHTML = `<span>${cooldownSecondsRemaining}s</span>`;
+                    cooldownSecondsRemaining--;
+                } else {
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                    cooldownSecondsRemaining = 0;
+                    if (input) {
+                        input.disabled = false;
+                        input.placeholder = originalPlaceholder;
+                        input.focus();
+                    }
+                    if (sendBtn) {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = `<span>Ask</span><i data-lucide="send" class="w-3.5 h-3.5"></i>`;
+                        lucide.createIcons();
+                    }
+                }
+            }
+
+            updateCooldownUI();
+            cooldownInterval = setInterval(updateCooldownUI, 1000);
+        }
 
         function setCategoryAndFocus(category) {
             const catSelect = document.getElementById('corpusCategoryFilter');
@@ -1009,6 +1052,7 @@
         }
 
         function sendQuickQuery(query) {
+            if (isGenerating || cooldownSecondsRemaining > 0) return;
             const input = document.getElementById('landingChatInput');
             if (input) {
                 input.value = query;
@@ -1103,7 +1147,7 @@
 
         async function handleLandingSend(e) {
             e.preventDefault();
-            if (isGenerating) return;
+            if (isGenerating || cooldownSecondsRemaining > 0) return;
 
             const input = document.getElementById('landingChatInput');
             const message = input.value.trim();
@@ -1264,10 +1308,9 @@
                     renderStreamingOutput(assistantCard, responseThought, responseText, currentTurnIdx);
                 }
                 isGenerating = false;
-                document.getElementById('landingSendBtn').disabled = false;
-                document.getElementById('landingChatInput').focus();
                 container.scrollTop = container.scrollHeight;
                 lucide.createIcons();
+                startCooldownTimer(20);
             }
         }
 
