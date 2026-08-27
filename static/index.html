@@ -581,6 +581,12 @@
                                     accumulatedText += parsed.token;
                                     renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
                                     container.scrollTop = container.scrollHeight;
+                                } else if (parsed.type === "verification") {
+                                    const vSummary = parsed.summary;
+                                    if (vSummary && vSummary.annotated_prose) {
+                                        accumulatedText = vSummary.annotated_prose;
+                                        renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText, currentTurnIdx);
+                                    }
                                 } else if (parsed.type === "error") {
                                     accumulatedText += `\n\n**Error:** ${parsed.error}`;
                                     renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
@@ -844,10 +850,19 @@
 
             sources.forEach((s, idx) => {
                 const tag = document.createElement('button');
-                tag.className = 'citation-tag';
+                tag.className = 'citation-tag flex items-center gap-1.5';
                 const label = s.title || s.law_no || s.gr_no || `Doc ${idx+1}`;
                 const score = s.score ? ` (${(s.score * 100).toFixed(0)}%)` : '';
-                tag.innerHTML = `<span>[${s.category || 'Law'}] ${escapeHtml(label)}${score}</span>`;
+                
+                const status = (s.doctrine_status || 'good_law').toLowerCase();
+                let statusBadge = `<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">✓ GOOD LAW</span>`;
+                if (status === 'modified') {
+                    statusBadge = `<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">⚠️ MODIFIED</span>`;
+                } else if (status === 'reversed' || status === 'abandoned') {
+                    statusBadge = `<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800">⛔ OVERRULED</span>`;
+                }
+
+                tag.innerHTML = `<span>[${s.category || 'Law'}] ${escapeHtml(label)}${score}</span> ${statusBadge}`;
                 tag.onclick = () => openCitationModal(idx);
                 chipsContainer.appendChild(tag);
             });

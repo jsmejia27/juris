@@ -1,0 +1,42 @@
+[
+  {
+    "id": "query-01",
+    "query": "What are the acts of financial abuse under Replic Act No. 9262 Section 5?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 9262"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-02",
+    "query": "How did Tan-Andal v. Andal (G.R. No. 196359) modify the guidelines in Molina for psychological incapacity under Article 36?",
+    "category": "doctrinal_evolution",
+    "expected_sources": ["196359", "108763"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-03",
+    "query": "What are the solo parent leave benefits under RA 11861?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 11861", "RA 8972"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-04",
+    "query": "What is the tax exemption percentage for spaceflight propellant manufacturing under Philippine space law in 2026?",
+    "category": "insufficient_context_refusal",
+    "expected_sources": [],
+    "expected_doctrine_status": "unknown",
+    "should_refuse": true
+  },
+  {
+    "id": "query-05",
+    "query": "Is a warrantless search at an automobile checkpoint valid under Philippine jurisprudence?",
+    "category": "constitutional_review",
+    "expected_sources": ["Checkpoint"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  }
+]

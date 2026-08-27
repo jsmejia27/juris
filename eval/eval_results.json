@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-08-27T14:06:54Z",
+  "total_queries": 5,
+  "mean_citation_accuracy": 1.0,
+  "mean_latency_sec": 24.95,
+  "query_details": [
+    {
+      "id": "query-01",
+      "query": "What are the acts of financial abuse under Replic Act No. 9262 Section 5?",
+      "complexity": "STATUTORY_ANALYSIS",
+      "retrieved_count": 8,
+      "verified_claims": 0,
+      "unverified_claims": 0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_sec": 37.25
+    },
+    {
+      "id": "query-02",
+      "query": "How did Tan-Andal v. Andal (G.R. No. 196359) modify the guidelines in Molina for psychological incapacity under Article 36?",
+      "complexity": "STATUTORY_ANALYSIS",
+      "retrieved_count": 8,
+      "verified_claims": 0,
+      "unverified_claims": 0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_sec": 25.88
+    },
+    {
+      "id": "query-03",
+      "query": "What are the solo parent leave benefits under RA 11861?",
+      "complexity": "DIRECT_LOOKUP",
+      "retrieved_count": 8,
+      "verified_claims": 0,
+      "unverified_claims": 0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_sec": 27.94
+    },
+    {
+      "id": "query-04",
+      "query": "What is the tax exemption percentage for spaceflight propellant manufacturing under Philippine space law in 2026?",
+      "complexity": "STATUTORY_ANALYSIS",
+      "retrieved_count": 8,
+      "verified_claims": 0,
+      "unverified_claims": 0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": false,
+      "latency_sec": 11.17
+    },
+    {
+      "id": "query-05",
+      "query": "Is a warrantless search at an automobile checkpoint valid under Philippine jurisprudence?",
+      "complexity": "DIRECT_LOOKUP",
+      "retrieved_count": 8,
+      "verified_claims": 0,
+      "unverified_claims": 0,
+      "citation_accuracy": 1.0,
+      "refusal_correct": true,
+      "latency_sec": 22.53
+    }
+  ]
+}

@@ -22,6 +22,8 @@ from rag_pipeline import (
     DEFAULT_STORAGE_DIR,
     DEFAULT_COLLECTION
 )
+from verifier import parse_and_validate_structured_output, verify_citations_and_claims
+from router import route_query
 from ingest_data import (
     process_repacts_records,
     process_juris_records,
@@ -178,10 +180,21 @@ async def chat_stream(req: ChatRequest):
         )
 
         # Stream LLM tokens asynchronously
+        accumulated_response = []
         for chunk in pipeline.llm.stream(prompt):
+            accumulated_response.append(chunk)
             payload = json.dumps({"type": "token", "token": chunk})
             yield f"data: {payload}\n\n"
             await asyncio.sleep(0.002)
+
+        # 4. Perform citation and claim verification pass
+        try:
+            full_text = "".join(accumulated_response)
+            structured_resp = parse_and_validate_structured_output(full_text)
+            v_summary = verify_citations_and_claims(structured_resp, sources, query=req.message)
+            yield f"data: {json.dumps({'type': 'verification', 'summary': v_summary.dict()})}\n\n"
+        except Exception as v_err:
+            logger.debug(f"Verification pass error: {v_err}")
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

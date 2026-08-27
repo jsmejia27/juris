@@ -476,6 +476,68 @@ def get_shared_qdrant_client(url: str = DEFAULT_QDRANT_URL) -> QdrantClient:
             _SHARED_QDRANT_CLIENT = QdrantClient(url=url, check_compatibility=False)
         return _SHARED_QDRANT_CLIENT
 
+def extract_lexical_anchors(query: str) -> List[str]:
+    """
+    Extracts high-precision legal lexical anchors from user queries:
+    - RA numbers (e.g. 'RA 9262', 'Republic Act 11861')
+    - G.R. docket numbers (e.g. 'G.R. No. 196359')
+    - Section / Article numbers (e.g. 'Section 5', 'Article 36')
+    """
+    anchors = []
+    if not query:
+        return anchors
+    
+    # 1. Republic Act numbers
+    ra_matches = re.finditer(r'\b(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})\b', query, re.IGNORECASE)
+    for m in ra_matches:
+        num = m.group(1)
+        anchors.extend([f"ra {num}", f"republic act {num}", num])
+
+    # 2. G.R. Numbers
+    gr_matches = re.finditer(r'\b(?:G\.R\.|GR)(?:\s+No\.?)?\s*([L0-9\-]+)\b', query, re.IGNORECASE)
+    for m in gr_matches:
+        num = m.group(1).replace('-', '')
+        anchors.extend([f"g.r. {m.group(1).lower()}", m.group(1).lower(), num])
+
+    # 3. Section / Article numbers
+    sec_matches = re.finditer(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', query, re.IGNORECASE)
+    for m in sec_matches:
+        val = m.group(1).lower()
+        prefix = "article" if "art" in m.group(0).lower() else "section"
+        anchors.extend([f"{prefix} {val}", val])
+
+    return list(dict.fromkeys(anchors))
+
+def apply_lexical_anchor_boost(candidates: List[Dict[str, Any]], query: str, boost_weight: float = 0.35) -> List[Dict[str, Any]]:
+    """
+    Boosts candidate ranking if document fields contain exact lexical anchor matches from the query.
+    """
+    anchors = extract_lexical_anchors(query)
+    if not anchors:
+        return candidates
+
+    scored_candidates = []
+    for doc in candidates:
+        text_corpus = (
+            str(doc.get("title", "")) + " " +
+            str(doc.get("gr_no", "")) + " " +
+            str(doc.get("doc_id", "")) + " " +
+            str(doc.get("text", ""))
+        ).lower()
+
+        match_count = sum(1 for a in anchors if a in text_corpus)
+        boost = match_count * boost_weight
+        new_score = float(doc.get("score", 0.0)) + boost
+
+        doc_copy = dict(doc)
+        doc_copy["score"] = round(new_score, 4)
+        doc_copy["lexical_boost"] = boost
+        scored_candidates.append(doc_copy)
+
+    # Sort descending by boosted score
+    scored_candidates.sort(key=lambda d: d["score"], reverse=True)
+    return scored_candidates
+
 class LegalRetriever:
     def __init__(
         self,
@@ -522,7 +584,7 @@ class LegalRetriever:
     def retrieve(
         self,
         query: str,
-        limit: int = 5,
+        limit: int = 8,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -530,8 +592,10 @@ class LegalRetriever:
     ) -> List[Dict[str, Any]]:
         """
         Two-Stage High-Precision Retrieval:
-        1. Hybrid Search (Dense + Sparse BM25 via RRF) to fetch top candidate passages (High Recall).
-        2. Neural Cross-Encoder Re-Ranker (FlashRank) to score exact legal relevance (High Precision).
+        1. Hybrid Search (Dense + Sparse BM25 via RRF) to fetch top 50 candidate passages.
+        2. Lexical Anchor Boost (exact matches on RA numbers, sections, G.R. numbers).
+        3. Cross-Encoder Re-Ranker (FlashRank) to score exact legal relevance.
+        4. Doctrine Currency Filter (deprioritizing reversed/abandoned cases unless historical).
         """
         # Build metadata filters
         must_conditions = []
@@ -564,10 +628,10 @@ class LegalRetriever:
 
         query_filter = models.Filter(must=must_conditions) if must_conditions else None
 
-        # 1. Stage 1: Candidate Search (Dense + Sparse RRF)
+        # 1. Stage 1: Candidate Search (Dense + Sparse RRF over top 50)
         q_dense = self.dense_embedder.embed_query(query)
         q_sparse = list(self.sparse_embedder.embed([query]))[0]
-        candidate_limit = max(limit * 4, 16)
+        candidate_limit = 50
 
         with _QDRANT_LOCK:
             results = self.client.query_points(
@@ -615,30 +679,39 @@ class LegalRetriever:
         if not candidate_docs:
             return []
 
-        # 2. Stage 2: Neural Cross-Encoder Re-Ranking
+        # 2. Apply Lexical Anchor Boosting
+        boosted_candidates = apply_lexical_anchor_boost(candidate_docs, query)
+
+        # 3. Stage 2: Neural Cross-Encoder Re-Ranking
         try:
             passages = [
                 {
                     "id": i,
                     "text": f"[{doc['category']}] {doc['title']} ({doc['gr_no']}): {doc['text']}"
                 }
-                for i, doc in enumerate(candidate_docs)
+                for i, doc in enumerate(boosted_candidates[:30])
             ]
             rerank_request = RerankRequest(query=query, passages=passages)
             reranked_results = self.ranker.rerank(rerank_request)
 
             final_docs = []
-            for item in reranked_results[:limit]:
+            for item in reranked_results:
                 doc_idx = item["id"]
-                doc = candidate_docs[doc_idx]
+                doc = boosted_candidates[doc_idx]
                 doc["score"] = float(item["score"])
                 final_docs.append(doc)
-            return final_docs
         except Exception as e:
-            logger.warning(f"Re-ranking exception, falling back to top candidates: {e}")
-            return candidate_docs[:limit]
+            logger.warning(f"Re-ranking exception, falling back to boosted candidates: {e}")
+            final_docs = boosted_candidates
 
-DEFAULT_NUM_CTX = 8192  # Optimized for 16GB VRAM on RTX 5070 Ti
+        # 4. Doctrine Currency Filtering
+        from doctrine_currency import filter_and_tag_doctrine_currency
+        currency_filtered = filter_and_tag_doctrine_currency(final_docs, query)
+
+        return currency_filtered[:limit]
+
+DEFAULT_NUM_CTX = 16384  # Expanded 16K context budget for RTX 5070 Ti (16GB VRAM)
+DEFAULT_TEMPERATURE = 0.0
 
 class LegalRAGPipeline:
     def __init__(
@@ -646,7 +719,7 @@ class LegalRAGPipeline:
         retriever: Optional[LegalRetriever] = None,
         llm_model: str = DEFAULT_LLM_MODEL,
         ollama_url: str = DEFAULT_OLLAMA_URL,
-        temperature: float = 0.1,
+        temperature: float = DEFAULT_TEMPERATURE,
         num_ctx: int = DEFAULT_NUM_CTX,
         congress_client: Optional[OpenCongressClient] = None
     ):
@@ -738,17 +811,20 @@ class LegalRAGPipeline:
 
         return query
 
-    def format_context(self, docs: List[Dict[str, Any]], bills_context: str = "") -> str:
+    def format_context(self, docs: List[Dict[str, Any]], bills_context: str = "", max_chars: int = 40000) -> str:
         if not docs and not bills_context:
             return "No relevant legal documents found."
         
         formatted_sources = []
+        current_chars = 0
+
         for i, doc in enumerate(docs, 1):
             doc_type = doc.get("category") or "Republic Act"
             title = doc.get("title") or "Philippine Legal Document"
             citation = doc.get("gr_no") or "N/A"
             section = doc.get("section") or self.extract_section(doc.get("text", ""))
             date = doc.get("date") or str(doc.get("year") or "")
+            doc_status = (doc.get("doctrine_status") or "good_law").upper()
             source_url = doc.get("source_url") or doc.get("doc_id") or ""
             if source_url and not source_url.startswith("http"):
                 clean_path = source_url.replace("juris:", "").replace("repacts:", "")
@@ -764,10 +840,19 @@ Title: {title}
 Citation: {citation}
 Section: {section}
 Date: {date}
+Doctrine Status: {doc_status}
 Source URL: {source_url}
 Text:
 {body}"""
+            if current_chars + len(source_block) > max_chars:
+                # Clip last block to fit budget
+                remaining = max_chars - current_chars
+                if remaining > 200:
+                    formatted_sources.append(source_block[:remaining] + "\n... [Remaining text clipped to 10K token budget]")
+                break
+
             formatted_sources.append(source_block)
+            current_chars += len(source_block)
 
         base_context = "\n\n" + ("\n" + "=" * 50 + "\n\n").join(formatted_sources)
         if bills_context:
