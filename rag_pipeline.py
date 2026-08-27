@@ -476,44 +476,149 @@ def get_shared_qdrant_client(url: str = DEFAULT_QDRANT_URL) -> QdrantClient:
             _SHARED_QDRANT_CLIENT = QdrantClient(url=url, check_compatibility=False)
         return _SHARED_QDRANT_CLIENT
 
-def extract_lexical_anchors(query: str) -> List[str]:
+# Config-driven constants for specificity-scaled lexical anchor boosting (Task 4)
+LEXICAL_BOOST_CONFIG = {
+    "tier_gr_docket": float(os.getenv("BOOST_TIER_GR_DOCKET", "0.30")),
+    "tier_ra_with_section": float(os.getenv("BOOST_TIER_RA_WITH_SECTION", "0.25")),
+    "tier_bare_ra": float(os.getenv("BOOST_TIER_BARE_RA", "0.15")),
+    "tier_bare_section": float(os.getenv("BOOST_TIER_BARE_SECTION", "0.05")),
+}
+
+# Config-driven model routing table (Task 2)
+MODEL_ROUTING_TABLE = {
+    "DIRECT_LOOKUP": "local",
+    "STATUTORY_ANALYSIS": "local",
+    "MULTI_DOCTRINE_SYNTHESIS": "frontier",
+    "CONSTITUTIONAL_REVIEW": "frontier"
+}
+ENABLE_FRONTIER_ROUTING = os.getenv("ENABLE_FRONTIER_ROUTING", "false").lower() in ("true", "1", "yes")
+DEFAULT_RERANKER_MODEL = os.getenv("RERANKER_MODEL", "bge-reranker-base")
+
+def resolve_model_execution_path(
+    query: str,
+    requested_model: Optional[str] = None,
+    routing_table: Optional[Dict[str, str]] = None,
+    enable_frontier: Optional[bool] = None
+) -> Dict[str, Any]:
     """
-    Extracts high-precision legal lexical anchors from user queries:
-    - RA numbers (e.g. 'RA 9262', 'Republic Act 11861')
-    - G.R. docket numbers (e.g. 'G.R. No. 196359')
-    - Section / Article numbers (e.g. 'Section 5', 'Article 36')
+    Routes query based on semantic complexity classifier in router.py.
+    """
+    from router import route_query
+    q_route = route_query(query)
+    complexity = q_route.get("complexity", "DIRECT_LOOKUP")
+
+    routes = routing_table or MODEL_ROUTING_TABLE
+    frontier_active = enable_frontier if enable_frontier is not None else ENABLE_FRONTIER_ROUTING
+    target_tier = routes.get(complexity, "local")
+
+    if target_tier == "frontier" and frontier_active:
+        resolved_path = "frontier"
+        resolved_model = os.getenv("FRONTIER_MODEL_NAME", "gemini-2.5-pro")
+    else:
+        resolved_path = "local"
+        resolved_model = requested_model or DEFAULT_LLM_MODEL
+
+    return {
+        "execution_path": resolved_path,
+        "model_name": resolved_model,
+        "complexity": complexity,
+        "route_reason": q_route.get("reason", ""),
+        "frontier_enabled": frontier_active
+    }
+
+def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
+    """
+    Extracts high-precision legal lexical anchors categorized into specificity tiers:
+    - tier_gr_docket (+0.30): Full G.R. docket number (e.g. 'G.R. No. 196359')
+    - tier_ra_with_section (+0.25): RA number + Section (e.g. 'RA 9262 Section 5(i)')
+    - tier_bare_ra (+0.15): Bare RA number (e.g. 'RA 9262')
+    - tier_bare_section (+0.05): Bare section/article (e.g. 'Section 5')
     """
     anchors = []
     if not query:
         return anchors
-    
-    # 1. Republic Act numbers
-    ra_matches = re.finditer(r'\b(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})\b', query, re.IGNORECASE)
-    for m in ra_matches:
-        num = m.group(1)
-        anchors.extend([f"ra {num}", f"republic act {num}", num])
 
-    # 2. G.R. Numbers
-    gr_matches = re.finditer(r'\b(?:G\.R\.|GR)(?:\s+No\.?)?\s*([L0-9\-]+)\b', query, re.IGNORECASE)
+    # 1. G.R. Docket Numbers (Tier 1 - Highest Specificity)
+    gr_matches = list(re.finditer(r'\b(?:G\.R\.|GR)(?:\s+No\.?)?\s*([L0-9\-]+)\b', query, re.IGNORECASE))
     for m in gr_matches:
-        num = m.group(1).replace('-', '')
-        anchors.extend([f"g.r. {m.group(1).lower()}", m.group(1).lower(), num])
+        raw_num = m.group(1).strip()
+        clean_num = raw_num.replace('-', '')
+        anchors.append({
+            "tier": "tier_gr_docket",
+            "terms": [f"g.r. {raw_num.lower()}", f"gr {raw_num.lower()}", raw_num.lower(), clean_num.lower()],
+            "raw": m.group(0)
+        })
 
-    # 3. Section / Article numbers
-    sec_matches = re.finditer(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', query, re.IGNORECASE)
+    # 2. RA with Section (Tier 2 - High Specificity)
+    ra_sec_matches = []
+    # Pattern A: RA 9262 Section 5
+    for m in re.finditer(r'\b(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})\s+(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', query, re.IGNORECASE):
+        ra_num = m.group(1).strip()
+        sec_val = m.group(2).strip().lower()
+        ra_sec_matches.append({
+            "tier": "tier_ra_with_section",
+            "ra_num": ra_num,
+            "sec_val": sec_val,
+            "terms": [f"ra {ra_num}", f"section {sec_val}", f"sec. {sec_val}", f"article {sec_val}"],
+            "raw": m.group(0)
+        })
+    # Pattern B: Section 5 of RA 9262
+    for m in re.finditer(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)\s+(?:of|under|in)\s+(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})', query, re.IGNORECASE):
+        sec_val = m.group(1).strip().lower()
+        ra_num = m.group(2).strip()
+        ra_sec_matches.append({
+            "tier": "tier_ra_with_section",
+            "ra_num": ra_num,
+            "sec_val": sec_val,
+            "terms": [f"ra {ra_num}", f"section {sec_val}", f"sec. {sec_val}", f"article {sec_val}"],
+            "raw": m.group(0)
+        })
+    anchors.extend(ra_sec_matches)
+
+    # 3. Bare RA (Tier 3 - Medium Specificity)
+    ra_matches = list(re.finditer(r'\b(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})\b', query, re.IGNORECASE))
+    for m in ra_matches:
+        ra_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_bare_ra",
+            "terms": [f"ra {ra_num}", f"republic act {ra_num}", ra_num],
+            "raw": m.group(0)
+        })
+
+    # 4. Bare Section / Article (Tier 4 - Low Specificity)
+    sec_matches = list(re.finditer(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', query, re.IGNORECASE))
     for m in sec_matches:
-        val = m.group(1).lower()
+        sec_val = m.group(1).strip().lower()
         prefix = "article" if "art" in m.group(0).lower() else "section"
-        anchors.extend([f"{prefix} {val}", val])
+        anchors.append({
+            "tier": "tier_bare_section",
+            "terms": [f"{prefix} {sec_val}", f"section {sec_val}.", f"section {sec_val} ", f"article {sec_val}.", f"article {sec_val} "],
+            "raw": m.group(0)
+        })
 
-    return list(dict.fromkeys(anchors))
+    return anchors
 
-def apply_lexical_anchor_boost(candidates: List[Dict[str, Any]], query: str, boost_weight: float = 0.35) -> List[Dict[str, Any]]:
+def extract_lexical_anchors(query: str) -> List[str]:
+    """Backward-compatible flat extractor returning string list."""
+    anchors_with_tiers = extract_lexical_anchors_with_tiers(query)
+    out = []
+    for a in anchors_with_tiers:
+        out.extend(a.get("terms", []))
+    return list(dict.fromkeys(out))
+
+def apply_lexical_anchor_boost(
+    candidates: List[Dict[str, Any]],
+    query: str,
+    config: Optional[Dict[str, float]] = None
+) -> List[Dict[str, Any]]:
     """
-    Boosts candidate ranking if document fields contain exact lexical anchor matches from the query.
+    Tiered Lexical Anchor Boost:
+    Calculates specific boost based on anchor hierarchy (G.R. > RA+Section > Bare RA > Bare Section).
+    Logs the firing tier and matched tokens onto the candidate document object.
     """
-    anchors = extract_lexical_anchors(query)
-    if not anchors:
+    boost_cfg = config or LEXICAL_BOOST_CONFIG
+    tiered_anchors = extract_lexical_anchors_with_tiers(query)
+    if not tiered_anchors:
         return candidates
 
     scored_candidates = []
@@ -525,18 +630,103 @@ def apply_lexical_anchor_boost(candidates: List[Dict[str, Any]], query: str, boo
             str(doc.get("text", ""))
         ).lower()
 
-        match_count = sum(1 for a in anchors if a in text_corpus)
-        boost = match_count * boost_weight
-        new_score = float(doc.get("score", 0.0)) + boost
+        highest_boost = 0.0
+        fired_tier = None
+        matched_anchors = []
+
+        for anc in tiered_anchors:
+            tier_name = anc["tier"]
+            boost_val = boost_cfg.get(tier_name, 0.0)
+
+            if tier_name == "tier_ra_with_section":
+                ra_found = f"ra {anc['ra_num']}" in text_corpus or f"republic act {anc['ra_num']}" in text_corpus or anc["ra_num"] in text_corpus
+                sec_found = f"section {anc['sec_val']}" in text_corpus or f"sec. {anc['sec_val']}" in text_corpus or f"article {anc['sec_val']}" in text_corpus or f"section {anc['sec_val']}." in text_corpus or f"section {anc['sec_val']} " in text_corpus
+                if ra_found and sec_found:
+                    if boost_val > highest_boost:
+                        highest_boost = boost_val
+                        fired_tier = "tier_ra_with_section"
+                    matched_anchors.append(anc["raw"])
+            else:
+                matched = any(t in text_corpus for t in anc["terms"])
+                if matched:
+                    if boost_val > highest_boost:
+                        highest_boost = boost_val
+                        fired_tier = tier_name
+                    matched_anchors.append(anc["raw"])
 
         doc_copy = dict(doc)
+        new_score = float(doc.get("score", 0.0)) + highest_boost
         doc_copy["score"] = round(new_score, 4)
-        doc_copy["lexical_boost"] = boost
+        doc_copy["lexical_boost"] = highest_boost
+        doc_copy["boost_tier"] = fired_tier
+        doc_copy["matched_anchors"] = matched_anchors
         scored_candidates.append(doc_copy)
 
     # Sort descending by boosted score
     scored_candidates.sort(key=lambda d: d["score"], reverse=True)
     return scored_candidates
+
+class LegalCrossEncoderRanker:
+    """
+    Unified Cross-Encoder Reranker supporting:
+    1. 'BAAI/bge-reranker-base' via FastEmbed (~500MB ONNX, high precision)
+    2. 'ms-marco-TinyBERT-L-2-v2' via FlashRank (lightweight baseline)
+    """
+    def __init__(self, model_name: str = DEFAULT_RERANKER_MODEL):
+        self.model_name = model_name
+        self._bge_ranker = None
+        self._flash_ranker = None
+
+        if "bge" in model_name.lower():
+            try:
+                from fastembed.rerank.cross_encoder import TextCrossEncoder
+                self.engine_type = "bge"
+                self._bge_ranker = TextCrossEncoder(model_name="BAAI/bge-reranker-base")
+                logger.info("Initialized BGE-Reranker-Base via FastEmbed ONNX.")
+            except Exception as e:
+                logger.warning(f"FastEmbed BGE reranker init failed ({e}), falling back to FlashRank.")
+                self.engine_type = "flashrank"
+                self._flash_ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
+        else:
+            self.engine_type = "flashrank"
+            self._flash_ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
+            logger.info("Initialized FlashRank (ms-marco-TinyBERT-L-2-v2).")
+
+    def rerank_passages(self, query: str, candidate_docs: List[Dict[str, Any]], top_k: int = 8) -> List[Dict[str, Any]]:
+        if not candidate_docs:
+            return []
+
+        doc_passages = [
+            f"[{doc.get('category', '')}] {doc.get('title', '')} ({doc.get('gr_no', '')}): {doc.get('text', '')}"
+            for doc in candidate_docs
+        ]
+
+        if self.engine_type == "bge" and self._bge_ranker is not None:
+            results = list(self._bge_ranker.rerank(query, doc_passages))
+            indexed_scores = [(idx, float(score)) for idx, score in enumerate(results)]
+            sorted_scores = sorted(indexed_scores, key=lambda x: x[1], reverse=True)[:top_k]
+            reranked_docs = []
+            for idx, score in sorted_scores:
+                doc = dict(candidate_docs[idx])
+                doc["rerank_score"] = score
+                doc["score"] = score
+                doc["reranker_model"] = "bge-reranker-base"
+                reranked_docs.append(doc)
+            return reranked_docs
+        else:
+            from flashrank import RerankRequest
+            passages = [{"id": i, "text": p} for i, p in enumerate(doc_passages)]
+            req = RerankRequest(query=query, passages=passages)
+            results = self._flash_ranker.rerank(req)
+            reranked_docs = []
+            for item in results[:top_k]:
+                idx = item["id"]
+                doc = dict(candidate_docs[idx])
+                doc["rerank_score"] = float(item["score"])
+                doc["score"] = float(item["score"])
+                doc["reranker_model"] = "ms-marco-TinyBERT-L-2-v2"
+                reranked_docs.append(doc)
+            return reranked_docs
 
 def clean_citation_title(title: str, gr_no: str = "", category: str = "") -> str:
     """
@@ -544,7 +734,7 @@ def clean_citation_title(title: str, gr_no: str = "", category: str = "") -> str
     """
     if not title or not title.strip():
         return gr_no or "Philippine Legal Authority"
-    
+
     t = title.strip()
     if t.lower().startswith("gr_") or t.lower().startswith("ra_") or t.lower().endswith(".html") or t.lower().endswith(".php"):
         m = re.search(r'(?:gr|ra)_(\d+)', t.lower())
@@ -561,31 +751,30 @@ def deduplicate_sources(sources_list: List[Dict[str, Any]]) -> List[Dict[str, An
     """
     if not sources_list:
         return []
-    
+
     seen = set()
     deduped = []
-    
+
     for s in sources_list:
         gr_raw = str(s.get("gr_no") or "").strip().lower()
         gr_clean = re.sub(r'[^a-z0-9]', '', gr_raw)
-        
+
         law_raw = str(s.get("law_no") or "").strip().lower()
         law_clean = re.sub(r'[^a-z0-9]', '', law_raw)
-        
+
         doc_id = str(s.get("doc_id") or "").strip().lower()
         title_raw = str(s.get("title") or "").strip().lower()
-        
+
         key = gr_clean or law_clean or doc_id or title_raw
         if key and key in seen:
             continue
         if key:
             seen.add(key)
-        
-        # Clean title if necessary
+
         s_copy = dict(s)
         s_copy["title"] = clean_citation_title(s_copy.get("title", ""), s_copy.get("gr_no", ""), s_copy.get("category", ""))
         deduped.append(s_copy)
-        
+
     return deduped
 
 class LegalRetriever:
@@ -595,6 +784,7 @@ class LegalRetriever:
         collection_name: str = DEFAULT_COLLECTION,
         ollama_url: str = DEFAULT_OLLAMA_URL,
         embed_model: str = DEFAULT_EMBED_MODEL,
+        reranker_model: str = DEFAULT_RERANKER_MODEL,
         client: Optional[QdrantClient] = None
     ):
         self.qdrant_url = qdrant_url
@@ -618,8 +808,7 @@ class LegalRetriever:
                 if col_dim == 768 and "qwen3-embedding" in embed_model:
                     logger.warning(
                         f"Collection '{collection_name}' has 768-dim vectors (indexed with nomic-embed-text). "
-                        "Using nomic-embed-text for query retrieval compatibility. "
-                        "Re-ingest/reset collection to 2560-dim to use full qwen3-embedding:4b vectors."
+                        "Using nomic-embed-text for query retrieval compatibility."
                     )
                     actual_embed_model = "nomic-embed-text:latest"
                 elif col_dim == 2560 and "nomic" in embed_model:
@@ -629,7 +818,7 @@ class LegalRetriever:
 
         self.dense_embedder = OllamaEmbeddings(model=actual_embed_model, base_url=ollama_url)
         self.sparse_embedder = SparseTextEmbedding(model_name="Qdrant/bm25")
-        self.ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
+        self.ranker = LegalCrossEncoderRanker(model_name=reranker_model)
 
     def retrieve(
         self,
@@ -643,11 +832,10 @@ class LegalRetriever:
         """
         Two-Stage High-Precision Retrieval:
         1. Hybrid Search (Dense + Sparse BM25 via RRF) to fetch top 50 candidate passages.
-        2. Lexical Anchor Boost (exact matches on RA numbers, sections, G.R. numbers).
-        3. Cross-Encoder Re-Ranker (FlashRank) to score exact legal relevance.
+        2. Tiered Lexical Anchor Boost (specificity-scaled boost for G.R. / RA / Section).
+        3. Cross-Encoder Re-Ranker (BGE-Reranker-Base / FlashRank) to score exact legal relevance.
         4. Doctrine Currency Filter (deprioritizing reversed/abandoned cases unless historical).
         """
-        # Build metadata filters
         must_conditions = []
         if category and category.lower() != "all":
             must_conditions.append(
@@ -729,34 +917,19 @@ class LegalRetriever:
         if not candidate_docs:
             return []
 
-        # 2. Apply Lexical Anchor Boosting
+        # 2. Stage 2: Specificity-Scaled Tiered Lexical Anchor Boosting
         boosted_candidates = apply_lexical_anchor_boost(candidate_docs, query)
 
-        # 3. Stage 2: Neural Cross-Encoder Re-Ranking
+        # 3. Stage 3: Neural Cross-Encoder Re-Ranking (Top-50 candidates -> Top-8)
         try:
-            passages = [
-                {
-                    "id": i,
-                    "text": f"[{doc['category']}] {doc['title']} ({doc['gr_no']}): {doc['text']}"
-                }
-                for i, doc in enumerate(boosted_candidates[:30])
-            ]
-            rerank_request = RerankRequest(query=query, passages=passages)
-            reranked_results = self.ranker.rerank(rerank_request)
-
-            final_docs = []
-            for item in reranked_results:
-                doc_idx = item["id"]
-                doc = boosted_candidates[doc_idx]
-                doc["score"] = float(item["score"])
-                final_docs.append(doc)
+            reranked_docs = self.ranker.rerank_passages(query, boosted_candidates[:50], top_k=limit*2)
         except Exception as e:
             logger.warning(f"Re-ranking exception, falling back to boosted candidates: {e}")
-            final_docs = boosted_candidates
+            reranked_docs = boosted_candidates
 
-        # 4. Doctrine Currency Filtering
+        # 4. Stage 4: Doctrine Currency Filtering & Tagging
         from doctrine_currency import filter_and_tag_doctrine_currency
-        currency_filtered = filter_and_tag_doctrine_currency(final_docs, query)
+        currency_filtered = filter_and_tag_doctrine_currency(reranked_docs, query)
 
         return currency_filtered[:limit]
 

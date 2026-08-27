@@ -21,7 +21,8 @@ from rag_pipeline import (
     SYSTEM_PROMPT_TEMPLATE,
     DEFAULT_STORAGE_DIR,
     DEFAULT_COLLECTION,
-    deduplicate_sources
+    deduplicate_sources,
+    resolve_model_execution_path
 )
 from verifier import parse_and_validate_structured_output, verify_citations_and_claims
 from router import route_query
@@ -115,7 +116,12 @@ async def chat_stream(req: ChatRequest):
     pipeline.set_num_ctx(req.num_ctx)
 
     async def event_generator():
-        # 0. Contextualize Follow-up Query for Retrieval
+        # 0. Route Query and Resolve Model Execution Path
+        route_decision = resolve_model_execution_path(req.message, requested_model=req.model)
+        logger.info(f"Query routing decision: path={route_decision['execution_path']}, complexity={route_decision['complexity']}")
+        yield f"data: {json.dumps({'type': 'routing', 'decision': route_decision})}\n\n"
+
+        # Contextualize Follow-up Query for Retrieval
         history_dicts = [{"role": h.role, "content": h.content} for h in (req.history or [])]
         retrieval_query = pipeline.contextualize_query(req.message, history_dicts)
 
@@ -467,23 +473,6 @@ async def stop_ingestion(auth: str = Depends(verify_admin)):
         INGESTION_STATE["should_stop"] = True
         return {"message": "Stop signal sent to ingestion job"}
     return {"message": "No active ingestion job to stop"}
-
-@app.post("/api/manage/reset")
-async def reset_database(auth: str = Depends(verify_admin)):
-    global INGESTION_STATE
-    if INGESTION_STATE["status"] == "running":
-        return JSONResponse(status_code=400, content={"error": "Cannot reset while ingestion is active."})
-
-    client = get_shared_qdrant_client()
-    try:
-        if client.collection_exists(DEFAULT_COLLECTION):
-            client.delete_collection(DEFAULT_COLLECTION)
-    except Exception as e:
-        logger.warning(f"Error deleting collection: {e}")
-
-    init_qdrant_collection(client, DEFAULT_COLLECTION, vector_size=768)
-    save_checkpoint(DEFAULT_STORAGE_DIR, set())
-    return {"message": "Native Qdrant collection and storage completely reset to 0 MB."}
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")

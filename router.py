@@ -18,9 +18,10 @@ CONFLICT_PATTERNS = [
 ]
 
 MULTI_DOCTRINE_PATTERNS = [
-    r"\bevolution of doctrine\b", r"\blandmark precedents\b", r"\bhistory of rulings\b",
-    r"\bcompare\b", r"\btan-andal vs molina\b", r"\bmolina and tan-andal\b",
-    r"\bmultiple decisions\b", r"\bcross-statute\b", r"\binterplay between\b"
+    r"\bevolution of doctrine\b", r"\blandmark precedents?\b", r"\bhistory of rulings\b",
+    r"\bcompare\b", r"\bcontrolling over\b", r"\btan-andal.*molina\b", r"\bmolina.*tan-andal\b",
+    r"\bmultiple decisions\b", r"\bcross-statute\b", r"\binterplay between\b",
+    r"\boverruled?\b", r"\bdoctrinal shift\b", r"\breconcil(?:e|ing)\b", r"\bmodified\b"
 ]
 
 CONSTITUTIONAL_PATTERNS = [

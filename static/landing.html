@@ -210,7 +210,7 @@
                     <div>
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-amber-300 text-xs font-mono font-medium mb-6 shadow-inner">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Standalone Qdrant & Qwen 14B on RTX 5070 Ti</span>
+                            <span>Native Qdrant & Qwen 3.5 9B on RTX 5070 Ti</span>
                         </div>
 
                         <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-midnight font-bold leading-[1.15] mb-5 tracking-tight">
@@ -218,21 +218,25 @@
                         </h1>
 
                         <p class="text-sm sm:text-base text-subtext leading-relaxed mb-6">
-                            Instant semantic retrieval across <strong>12,000+ Republic Acts</strong>, <strong>68,000+ Supreme Court Decisions</strong>, and live <strong>20th Congress Senate & House Bills</strong> with sub-30ms neural precision.
+                            Instant semantic retrieval across <strong>12,000+ Republic Acts</strong>, <strong>66,759 Supreme Court Decisions (1901–2024)</strong>, <strong>26,000+ Executive Issuances</strong>, and live <strong>20th Congress Senate & House Bills</strong> with sub-30ms neural precision.
                         </p>
 
                         <!-- Key Performance Ribbon -->
-                        <div class="grid grid-cols-3 gap-3 p-4 bg-white border border-hairline rounded-xl shadow-sm mb-6">
+                        <div class="grid grid-cols-4 gap-2.5 p-3.5 bg-white border border-hairline rounded-xl shadow-sm mb-6">
                             <div class="text-center">
-                                <div class="font-mono font-bold text-lg text-midnight">12,000+</div>
+                                <div class="font-mono font-bold text-base text-midnight">12,000+</div>
                                 <div class="text-[10px] font-mono uppercase text-slate-500">Statutes</div>
                             </div>
-                            <div class="text-center border-x border-hairline">
-                                <div class="font-mono font-bold text-lg text-midnight">68,000+</div>
+                            <div class="text-center border-l border-hairline">
+                                <div class="font-mono font-bold text-base text-midnight">66,759</div>
                                 <div class="text-[10px] font-mono uppercase text-slate-500">SC Cases</div>
                             </div>
-                            <div class="text-center">
-                                <div class="font-mono font-bold text-lg text-emerald-700">&lt; 30 ms</div>
+                            <div class="text-center border-l border-hairline">
+                                <div class="font-mono font-bold text-base text-gold">2.82M</div>
+                                <div class="text-[10px] font-mono uppercase text-slate-500">Vectors</div>
+                            </div>
+                            <div class="text-center border-l border-hairline">
+                                <div class="font-mono font-bold text-base text-emerald-700">&lt; 30 ms</div>
                                 <div class="text-[10px] font-mono uppercase text-slate-500">Retrieval</div>
                             </div>
                         </div>
@@ -314,7 +318,7 @@
                                     </p>
                                     <div class="text-[11px] font-mono text-slate-400 border-t border-slate-100 pt-2 flex items-center gap-1">
                                         <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-                                        <span>Vector search verified against 241,661 points on Standalone Qdrant server.</span>
+                                        <span>Vector search verified against 2,821,455 points on Native Qdrant server (78,759 primary legal documents).</span>
                                     </div>
                                 </div>
                             </div>
@@ -541,7 +545,7 @@
                         </p>
                         <div class="text-[11px] font-mono text-slate-400 border-t border-slate-100 pt-2 flex items-center gap-1">
                             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-                            <span>Vector search verified against 241,661 points on Standalone Qdrant server.</span>
+                            <span>Vector search verified against 2,821,455 points on Native Qdrant server (78,759 primary legal documents).</span>
                         </div>
                     </div>
                 </div>
@@ -859,7 +863,7 @@
 
                     <!-- Metadata Grid -->
                     <div style="margin-top: 12px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10px; font-family: monospace; color: #334155;">
-                        <div><strong>VERIFIED CORPUS:</strong> 78,759 Docs</div>
+                        <div><strong>VERIFIED CORPUS:</strong> 78,759 Docs (2.82M Points)</div>
                         <div><strong>VECTOR DATABASE:</strong> Native Qdrant</div>
                         <div><strong>EMBEDDING:</strong> Qwen3-Embed 4B</div>
                     </div>

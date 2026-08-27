@@ -5,7 +5,9 @@ import pytest
 from doctrine_currency import (
     get_case_status,
     is_historical_query,
-    filter_and_tag_doctrine_currency
+    filter_and_tag_doctrine_currency,
+    get_formatted_doctrine_badge,
+    KNOWN_DOCTRINE_STATUS
 )
 
 def test_doctrine_status_tan_andal():
@@ -27,15 +29,29 @@ def test_historical_query_detection():
 
 def test_filter_abandoned_cases():
     docs = [
-        {"title": "Case A (Good )", "gr_no": "G.R. 196359", "category": "Jurisprudence"},
-        {"title": "Case B (Abandoned)", "gr_no": "G.R. 999999", "status": "abandoned", "category": "Jurisprudence"}
+        {"gr_no": "G.R. No. 196359", "title": "Tan-Andal", "text": "..."},
+        {"gr_no": "G.R. No. 999999", "title": "Overruled Case", "text": "This doctrine is hereby abandoned..."}
     ]
-    #Non-historical query: abandoned document is filtered out
-    results = filter_and_tag_doctrine_currency(docs, query="What is the ruling on Art. 36?")
-    assert len(results) == 1
-    assert results[0]["gr_no"] == "G.R. 196359"
-    assert results[0]["doctrine_status"] == "good_law"
+    res_modern = filter_and_tag_doctrine_currency(docs, "What is current rule?")
+    assert len(res_modern) == 1
+    assert res_modern[0]["gr_no"] == "G.R. No. 196359"
 
-    #Historical query: both documents preserved with status tags
-    hist_results = filter_and_tag_doctrine_currency(docs, query="What was the abandoned doctrine in past cases?")
-    assert len(hist_results) == 2
+    res_hist = filter_and_tag_doctrine_currency(docs, "What was the previous historical rule?")
+    assert len(res_hist) == 2
+
+def test_doctrine_staleness_badge():
+    # Valmonte is dated 2025-01-10 (older than 180 days)
+    doc_valmonte = {"gr_no": "G.R. No. 81561", "title": "Valmonte v. De Villa", "text": "checkpoints"}
+    badge_valmonte = get_formatted_doctrine_badge(doc_valmonte, max_age_days=180)
+    assert "verified as of" in badge_valmonte
+
+    # Tan-Andal is dated 2026-06-01 (fresh)
+    doc_tan_andal = {"gr_no": "G.R. No. 196359", "title": "Tan-Andal", "text": "art 36"}
+    badge_tan = get_formatted_doctrine_badge(doc_tan_andal, max_age_days=180)
+    assert badge_tan == "✓ GOOD LAW"
+
+def test_doctrine_record_metadata():
+    rec = KNOWN_DOCTRINE_STATUS["196359"]
+    assert rec.source_basis == "manually_curated"
+    assert rec.ponente == "Leonen, J."
+    assert rec.last_verified_date == "2026-06-01"

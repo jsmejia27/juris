@@ -1,0 +1,198 @@
+{
+  "timestamp": "2026-08-27T18:39:56Z",
+  "evaluated_queries": 13,
+  "candidate_pool_recall_at_50": 1.0,
+  "tinybert": {
+    "model": "ms-marco-TinyBERT-L-2-v2",
+    "recall_at_8": 0.923,
+    "avg_latency_ms": 178.0
+  },
+  "bge_reranker_base": {
+    "model": "BAAI/bge-reranker-base",
+    "recall_at_8": 1.0,
+    "avg_latency_ms": 17638.1
+  },
+  "recall_delta_bge_vs_tiny": 0.077,
+  "comparisons": [
+    {
+      "id": "query-01",
+      "query": "What are the acts of financial abuse under Republic Act No. 9262 Section 5?",
+      "expected": [
+        "RA 9262",
+        "ra_9262"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": false,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 180.0,
+      "bge_latency_ms": 13769.0
+    },
+    {
+      "id": "query-02",
+      "query": "How did Tan-Andal v. Andal (G.R. No. 196359) modify the guidelines in Molina for psychological incapacity under Article 36?",
+      "expected": [
+        "196359",
+        "G.R. No. 196359",
+        "108763"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 163.6,
+      "bge_latency_ms": 14893.8
+    },
+    {
+      "id": "query-03",
+      "query": "What are the solo parent leave benefits and cash subsidies under RA 11861?",
+      "expected": [
+        "RA 11861",
+        "ra_11861",
+        "RA 8972"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 183.6,
+      "bge_latency_ms": 16845.0
+    },
+    {
+      "id": "query-05",
+      "query": "Is a warrantless search at a routine automobile checkpoint constitutional under Philippine jurisprudence?",
+      "expected": [
+        "Valmonte",
+        "Checkpoint",
+        "G.R. No."
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 164.2,
+      "bge_latency_ms": 15664.9
+    },
+    {
+      "id": "query-06",
+      "query": "What are the offenses and penalties for cyber-libel under Section 4(c)(4) and Section 6 of Republic Act No. 10175?",
+      "expected": [
+        "RA 10175",
+        "ra_10175",
+        "Disini",
+        "203335"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 192.0,
+      "bge_latency_ms": 20974.9
+    },
+    {
+      "id": "query-07",
+      "query": "Did the Supreme Court in Carpio-Morales v. CA (G.R. No. 217126) abandon the condonation doctrine for elective officials?",
+      "expected": [
+        "217126",
+        "G.R. No. 217126",
+        "Carpio-Morales",
+        "Aguinaldo"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 160.2,
+      "bge_latency_ms": 18431.5
+    },
+    {
+      "id": "query-08",
+      "query": "Under Article 26 of the Family Code as clarified in Republic v. Manalo (G.R. No. 221029), can a Filipino spouse remarry if the foreign divorce was initiated by the Filipino?",
+      "expected": [
+        "221029",
+        "G.R. No. 221029",
+        "Manalo"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 203.0,
+      "bge_latency_ms": 23817.5
+    },
+    {
+      "id": "query-09",
+      "query": "What constitutes gender-based online sexual harassment under Section 12 of the Safe Spaces Act (RA 11313)?",
+      "expected": [
+        "RA 11313",
+        "ra_11313"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 151.0,
+      "bge_latency_ms": 17105.9
+    },
+    {
+      "id": "query-10",
+      "query": "What are the requisites for a valid warrantless arrest under Rule 113 Section 5 of the Revised Rules of Criminal Procedure?",
+      "expected": [
+        "Rule 113",
+        "Section 5",
+        "Rules of Court"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 180.0,
+      "bge_latency_ms": 17268.2
+    },
+    {
+      "id": "query-11",
+      "query": "Does refusal of sexual intercourse constitute psychological incapacity under Chi Ming Tsoi v. CA (G.R. No. 119190)?",
+      "expected": [
+        "119190",
+        "G.R. No. 119190",
+        "Chi Ming Tsoi"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 278.8,
+      "bge_latency_ms": 20119.2
+    },
+    {
+      "id": "query-13",
+      "query": "What are the rights of an accused under custodial investigation under Republic Act No. 7438?",
+      "expected": [
+        "RA 7438",
+        "ra_7438"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 139.6,
+      "bge_latency_ms": 19081.3
+    },
+    {
+      "id": "query-14",
+      "query": "What is the legal doctrine on plain view warrantless seizures in Philippine criminal jurisprudence?",
+      "expected": [
+        "Plain View",
+        "Search",
+        "G.R. No."
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 122.2,
+      "bge_latency_ms": 14752.2
+    },
+    {
+      "id": "query-15",
+      "query": "What are the grounds and requirements for the formation of a One Person Corporation (OPC) under the Revised Corporation Code (RA 11232)?",
+      "expected": [
+        "RA 11232",
+        "ra_11232"
+      ],
+      "in_top50_pool": true,
+      "tinybert_top8_hit": true,
+      "bge_top8_hit": true,
+      "tinybert_latency_ms": 195.9,
+      "bge_latency_ms": 16571.4
+    }
+  ]
+}

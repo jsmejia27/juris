@@ -86,7 +86,7 @@ def test_verify_hallucinated():
         claims=[Claim(
             text='Bad claim',
             source_id='RA 99999',
-           quoted_text='Fake quote',
+            quoted_text='Fake quote',
             source_type='statute'
         )],
         answer_prose='Prose [RA 99999]'
@@ -95,3 +95,48 @@ def test_verify_hallucinated():
     assert summary.verified_claims == 0
     assert summary.unverified_claims == 1
     assert len(summary.failures) == 1
+    assert summary.failures[0]["failure_type"] == "source_not_retrieved"
+    assert "Unverified — Not Retrieved" in summary.annotated_prose
+
+def test_verify_quote_mismatch():
+    retrieved = [{
+        'doc_id': 'ra-8972',
+        'gr_no': 'RA 8972',
+        'title': 'Solo Parents',
+        'text': 'Parental leave of seven days shall be granted to solo parent employees.'
+    }]
+    resp = StructuredLegalResponse(
+        claims=[Claim(
+            text='Claim with fabricated quote',
+            source_id='RA 8972',
+            quoted_text='Mandatory paid leave of thirty calendar days with bonus',
+            source_type='statute'
+        )],
+        answer_prose='Under [RA 8972], benefits apply.'
+    )
+    summary = verify_citations_and_claims(resp, retrieved)
+    assert summary.verified_claims == 0
+    assert summary.unverified_claims == 1
+    assert summary.failures[0]["failure_type"] == "quote_mismatch"
+    assert "Unverified — Quote Mismatch" in summary.annotated_prose
+
+def test_verify_paraphrased_valid():
+    retrieved = [{
+        'doc_id': 'ra-9262',
+        'gr_no': 'RA 9262',
+        'title': 'VAWC',
+        'text': 'Section 5. Acts of violence against women and children...'
+    }]
+    resp = StructuredLegalResponse(
+        claims=[Claim(
+            text='VAWC penalizes violence against women and children',
+            source_id='RA 9262',
+            quoted_text=None,
+            source_type='statute'
+        )],
+        answer_prose='Under [RA 9262], violence is penalized.'
+    )
+    summary = verify_citations_and_claims(resp, retrieved)
+    assert summary.verified_claims == 1
+    assert summary.unverified_claims == 0
+    assert summary.accuracy_rate == 1.0

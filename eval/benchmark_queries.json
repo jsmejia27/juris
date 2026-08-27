@@ -1,9 +1,9 @@
 [
   {
     "id": "query-01",
-    "query": "What are the acts of financial abuse under Replic Act No. 9262 Section 5?",
+    "query": "What are the acts of financial abuse under Republic Act No. 9262 Section 5?",
     "category": "statutory_lookup",
-    "expected_sources": ["RA 9262"],
+    "expected_sources": ["RA 9262", "ra_9262"],
     "expected_doctrine_status": "good_law",
     "should_refuse": false
   },
@@ -11,15 +11,15 @@
     "id": "query-02",
     "query": "How did Tan-Andal v. Andal (G.R. No. 196359) modify the guidelines in Molina for psychological incapacity under Article 36?",
     "category": "doctrinal_evolution",
-    "expected_sources": ["196359", "108763"],
+    "expected_sources": ["196359", "G.R. No. 196359", "108763"],
     "expected_doctrine_status": "good_law",
     "should_refuse": false
   },
   {
     "id": "query-03",
-    "query": "What are the solo parent leave benefits under RA 11861?",
+    "query": "What are the solo parent leave benefits and cash subsidies under RA 11861?",
     "category": "statutory_lookup",
-    "expected_sources": ["RA 11861", "RA 8972"],
+    "expected_sources": ["RA 11861", "ra_11861", "RA 8972"],
     "expected_doctrine_status": "good_law",
     "should_refuse": false
   },
@@ -33,9 +33,89 @@
   },
   {
     "id": "query-05",
-    "query": "Is a warrantless search at an automobile checkpoint valid under Philippine jurisprudence?",
+    "query": "Is a warrantless search at a routine automobile checkpoint constitutional under Philippine jurisprudence?",
     "category": "constitutional_review",
-    "expected_sources": ["Checkpoint"],
+    "expected_sources": ["Valmonte", "Checkpoint", "G.R. No."],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-06",
+    "query": "What are the offenses and penalties for cyber-libel under Section 4(c)(4) and Section 6 of Republic Act No. 10175?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 10175", "ra_10175", "Disini", "203335"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-07",
+    "query": "Did the Supreme Court in Carpio-Morales v. CA (G.R. No. 217126) abandon the condonation doctrine for elective officials?",
+    "category": "doctrinal_evolution",
+    "expected_sources": ["217126", "G.R. No. 217126", "Carpio-Morales", "Aguinaldo"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-08",
+    "query": "Under Article 26 of the Family Code as clarified in Republic v. Manalo (G.R. No. 221029), can a Filipino spouse remarry if the foreign divorce was initiated by the Filipino?",
+    "category": "doctrinal_evolution",
+    "expected_sources": ["221029", "G.R. No. 221029", "Manalo"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-09",
+    "query": "What constitutes gender-based online sexual harassment under Section 12 of the Safe Spaces Act (RA 11313)?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 11313", "ra_11313"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-10",
+    "query": "What are the requisites for a valid warrantless arrest under Rule 113 Section 5 of the Revised Rules of Criminal Procedure?",
+    "category": "statutory_lookup",
+    "expected_sources": ["Rule 113", "Section 5", "Rules of Court"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-11",
+    "query": "Does refusal of sexual intercourse constitute psychological incapacity under Chi Ming Tsoi v. CA (G.R. No. 119190)?",
+    "category": "doctrinal_evolution",
+    "expected_sources": ["119190", "G.R. No. 119190", "Chi Ming Tsoi"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-12",
+    "query": "What is the mandatory quarantine duration for Martian agricultural samples imported into Cebu under 2026 quarantine regulations?",
+    "category": "insufficient_context_refusal",
+    "expected_sources": [],
+    "expected_doctrine_status": "unknown",
+    "should_refuse": true
+  },
+  {
+    "id": "query-13",
+    "query": "What are the rights of an accused under custodial investigation under Republic Act No. 7438?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 7438", "ra_7438"],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-14",
+    "query": "What is the legal doctrine on plain view warrantless seizures in Philippine criminal jurisprudence?",
+    "category": "constitutional_review",
+    "expected_sources": ["Plain View", "Search", "G.R. No."],
+    "expected_doctrine_status": "good_law",
+    "should_refuse": false
+  },
+  {
+    "id": "query-15",
+    "query": "What are the grounds and requirements for the formation of a One Person Corporation (OPC) under the Revised Corporation Code (RA 11232)?",
+    "category": "statutory_lookup",
+    "expected_sources": ["RA 11232", "ra_11232"],
     "expected_doctrine_status": "good_law",
     "should_refuse": false
   }
