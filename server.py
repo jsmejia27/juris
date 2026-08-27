@@ -511,6 +511,11 @@ async def read_chat():
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/disclaimer", response_class=HTMLResponse)
+async def read_disclaimer():
+    with open("static/disclaimer.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.get("/manage-juris", response_class=HTMLResponse)
 async def read_manage_juris(auth: str = Depends(verify_admin)):
     with open("static/admin.html", "r", encoding="utf-8") as f:
