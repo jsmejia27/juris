@@ -492,7 +492,7 @@ MODEL_ROUTING_TABLE = {
     "CONSTITUTIONAL_REVIEW": "frontier"
 }
 ENABLE_FRONTIER_ROUTING = os.getenv("ENABLE_FRONTIER_ROUTING", "false").lower() in ("true", "1", "yes")
-DEFAULT_RERANKER_MODEL = os.getenv("RERANKER_MODEL", "bge-reranker-base")
+DEFAULT_RERANKER_MODEL = os.getenv("RERANKER_MODEL", "ms-marco-TinyBERT-L-2-v2")
 
 def resolve_model_execution_path(
     query: str,
