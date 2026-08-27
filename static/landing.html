@@ -507,6 +507,8 @@
 
         let currentRetrievedSources = [];
         let isGenerating = false;
+        let landingSessionHistory = [];
+        let landingSessionTurns = [];
 
         function setCategoryAndFocus(category) {
             const catSelect = document.getElementById('corpusCategoryFilter');
@@ -527,7 +529,22 @@
             }
         }
 
-        let landingSessionTurns = [];
+        function openLandingCitationByText(citeText) {
+            if (!currentRetrievedSources || currentRetrievedSources.length === 0) return;
+            const clean = citeText.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const foundIdx = currentRetrievedSources.findIndex(s => {
+                const gr = (s.gr_no || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                const title = (s.title || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                const law = (s.law_no || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                const docId = (s.doc_id || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+                return (gr && clean.includes(gr)) || (law && clean.includes(law)) || clean.includes(title) || (gr && gr.includes(clean)) || (docId && docId.includes(clean));
+            });
+            if (foundIdx !== -1) {
+                openLandingCitationModal(foundIdx);
+            } else {
+                openLandingCitationModal(0);
+            }
+        }
 
         function clearChatMessages() {
             landingSessionHistory = [];
@@ -736,7 +753,12 @@
             }
 
             if (text) {
-                const rawParsed = marked.parse(text);
+                // Convert [RA XXXX]¹ or [SOURCE 1] into clickable citation pills
+                let formatted = text.replace(/\[([A-Za-z0-9\s\.\,\-\–]+)\]([¹²³⁴⁵⁶⁷⁸⁹])/g, function(match, citeText, num) {
+                    return `<span class="citation-pill cursor-pointer px-1.5 py-0.5 bg-amber-50 text-amber-900 border border-amber-300 rounded font-mono text-[11px] hover:bg-amber-100 transition inline-flex items-center gap-0.5" onclick="openLandingCitationByText('${escapeHtml(citeText.trim())}')">${escapeHtml(citeText.trim())} <sup>${num}</sup></span>`;
+                });
+
+                const rawParsed = marked.parse(formatted);
                 const styledHtml = enhanceBlockquotes(rawParsed);
                 html += `<div class="legal-prose text-slate-800">${styledHtml}</div>`;
             }
@@ -764,6 +786,7 @@
             }
 
             container.innerHTML = html;
+            lucide.createIcons();
         }
 
         function copyLandingTurn(turnIdx) {
