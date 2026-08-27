@@ -211,6 +211,19 @@ def verify_citations_and_claims(
     if log_failures and failures:
         try:
             os.makedirs(os.path.dirname(VERIFICATION_LOG_PATH), exist_ok=True)
+            # Size-based log rotation (10 MB max)
+            if os.path.exists(VERIFICATION_LOG_PATH) and os.path.getsize(VERIFICATION_LOG_PATH) > 10 * 1024 * 1024:
+                backup_path = VERIFICATION_LOG_PATH + ".1"
+                if os.path.exists(backup_path):
+                    try:
+                        os.remove(backup_path)
+                    except OSError:
+                        pass
+                try:
+                    os.rename(VERIFICATION_LOG_PATH, backup_path)
+                except OSError:
+                    pass
+
             with open(VERIFICATION_LOG_PATH, "a", encoding="utf-8") as f:
                 for fail in failures:
                     fail["timestamp"] = datetime.utcnow().isoformat()

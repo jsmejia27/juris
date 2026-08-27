@@ -16,6 +16,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Marked Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- DOMPurify XSS Sanitizer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
     <!-- html2pdf.js Bundle CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -660,7 +662,8 @@
 
                 const rawParsed = marked.parse(formatted);
                 const styledHtml = enhanceBlockquotes(rawParsed);
-                html += `<div class="legal-prose text-slate-800">${styledHtml}</div>`;
+                const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
+                html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
             }
 
             // If turn is finalized, add the action toolbar

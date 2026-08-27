@@ -42,13 +42,31 @@ import uuid
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+from pydantic import BaseModel, Field, field_validator
+
+ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:9010,http://127.0.0.1:9010,http://0.0.0.0:9010"
+    ).split(",") if origin.strip()
+]
+
+ALLOWED_CHAT_MODELS = {
+    "qwen3.5:9b",
+    "qwen3:14b",
+    "llama3.2:latest",
+    "phi4-mini-reasoning:latest",
+    "qwen3.8:latest",
+    "qwen2.5vl:latest"
+}
+
 app = FastAPI(title="Juris - Philippine Legal AI Platform")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -70,19 +88,25 @@ INGESTION_STATE = {
 }
 
 class ChatMessage(BaseModel):
-    role: str # "user" or "assistant"
-    content: str
+    role: str = Field(..., pattern=r"^(user|assistant|system)$")
+    content: str = Field(..., max_length=10000)
 
 class ChatRequest(BaseModel):
-    message: str
-    history: Optional[List[ChatMessage]] = []
-    model: Optional[str] = "qwen3.5:9b"
-    temperature: Optional[float] = 0.1
-    num_ctx: Optional[int] = 8192
-    category: Optional[str] = "All"
-    top_k: Optional[int] = 4
-    year_min: Optional[int] = 1901
-    year_max: Optional[int] = 2026
+    message: str = Field(..., min_length=1, max_length=4000)
+    history: Optional[List[ChatMessage]] = Field(default=[], max_length=20)
+    model: Optional[str] = Field(default="qwen3.5:9b", max_length=64)
+    temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
+    num_ctx: Optional[int] = Field(default=8192, ge=1024, le=16384)
+    category: Optional[str] = Field(default="All", max_length=50)
+    top_k: Optional[int] = Field(default=4, ge=1, le=16)
+    year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
+    year_max: Optional[int] = Field(default=2026, ge=1900, le=2026)
+
+    @field_validator("model")
+    def sanitize_model(cls, v):
+        if v not in ALLOWED_CHAT_MODELS:
+            return "qwen3.5:9b"
+        return v
 
 class IngestJobRequest(BaseModel):
     source: str = "repacts" # "repacts", "juris", "all"
@@ -225,8 +249,8 @@ async def chat_stream(req: ChatRequest):
 
 security = HTTPBasic()
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "Mangaldan2026"
+ADMIN_USERNAME = os.getenv("JURIS_ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD", "Mangaldan2026")
 
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
     correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
