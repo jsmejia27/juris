@@ -20,7 +20,8 @@ from rag_pipeline import (
     _QDRANT_LOCK,
     SYSTEM_PROMPT_TEMPLATE,
     DEFAULT_STORAGE_DIR,
-    DEFAULT_COLLECTION
+    DEFAULT_COLLECTION,
+    deduplicate_sources
 )
 from verifier import parse_and_validate_structured_output, verify_citations_and_claims
 from router import route_query
@@ -166,8 +167,11 @@ async def chat_stream(req: ChatRequest):
         except Exception as err:
             logger.warning(f"Non-blocking Open Congress query exception: {err}")
 
+        # Deduplicate all statutory sources and bills so each authority appears only once
+        deduped_sources = deduplicate_sources(all_sources)
+
         # Send combined sources event
-        yield f"data: {json.dumps({'type': 'sources', 'sources': all_sources})}\n\n"
+        yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources})}\n\n"
         await asyncio.sleep(0.01)
 
         # 3. Format Context & Multi-Turn Prompt

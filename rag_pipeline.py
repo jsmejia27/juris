@@ -538,6 +538,56 @@ def apply_lexical_anchor_boost(candidates: List[Dict[str, Any]], query: str, boo
     scored_candidates.sort(key=lambda d: d["score"], reverse=True)
     return scored_candidates
 
+def clean_citation_title(title: str, gr_no: str = "", category: str = "") -> str:
+    """
+    Cleans raw docket or database filenames (e.g. 'gr_203335_so_2014') into proper judicial citation titles.
+    """
+    if not title or not title.strip():
+        return gr_no or "Philippine Legal Authority"
+    
+    t = title.strip()
+    if t.lower().startswith("gr_") or t.lower().startswith("ra_") or t.lower().endswith(".html") or t.lower().endswith(".php"):
+        m = re.search(r'(?:gr|ra)_(\d+)', t.lower())
+        if m:
+            prefix = "Republic Act No." if "ra" in t.lower() else "G.R. No."
+            cat = "Republic Act" if "ra" in t.lower() else "Supreme Court Decision"
+            return f"{prefix} {m.group(1)} ({cat})"
+    return t
+
+def deduplicate_sources(sources_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Deduplicates legal sources and citations by canonical G.R. number, law number, or title.
+    Retains the first/highest-scoring entry for each unique legal authority.
+    """
+    if not sources_list:
+        return []
+    
+    seen = set()
+    deduped = []
+    
+    for s in sources_list:
+        gr_raw = str(s.get("gr_no") or "").strip().lower()
+        gr_clean = re.sub(r'[^a-z0-9]', '', gr_raw)
+        
+        law_raw = str(s.get("law_no") or "").strip().lower()
+        law_clean = re.sub(r'[^a-z0-9]', '', law_raw)
+        
+        doc_id = str(s.get("doc_id") or "").strip().lower()
+        title_raw = str(s.get("title") or "").strip().lower()
+        
+        key = gr_clean or law_clean or doc_id or title_raw
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        
+        # Clean title if necessary
+        s_copy = dict(s)
+        s_copy["title"] = clean_citation_title(s_copy.get("title", ""), s_copy.get("gr_no", ""), s_copy.get("category", ""))
+        deduped.append(s_copy)
+        
+    return deduped
+
 class LegalRetriever:
     def __init__(
         self,

@@ -773,12 +773,13 @@
                 const formattedBody = enhanceBlockquotes(parsedBody);
 
                 let sourcesHtml = "";
-                if (t.sources && t.sources.length > 0) {
-                    const sourcesItems = t.sources.map((s, sIdx) => `
+                const uniqueSources = deduplicateSources(t.sources);
+                if (uniqueSources && uniqueSources.length > 0) {
+                    const sourcesItems = uniqueSources.map((s, sIdx) => `
                         <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
-                            <td style="padding: 6px 8px; font-weight: bold; color: #0a0f1d;">${sIdx + 1}. [${s.category || 'Law'}] ${s.title || s.law_no || s.gr_no || 'Document'}</td>
-                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.gr_no || s.law_no || 'N/A'}</td>
-                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${s.date || s.year || 'N/A'}</td>
+                            <td style="padding: 6px 8px; font-weight: bold; color: #0a0f1d;">${sIdx + 1}. [${s.category || 'Law'}] ${escapeHtml(cleanCitationTitle(s.title || s.law_no || s.gr_no))}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${escapeHtml(s.gr_no || s.law_no || 'N/A')}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; color: #475569;">${escapeHtml(s.date || s.year || 'N/A')}</td>
                             <td style="padding: 6px 8px; color: #b8860b; font-weight: bold;">${s.score ? (s.score * 100).toFixed(0) + '%' : 'Verified'}</td>
                         </tr>
                     `).join("");
@@ -786,7 +787,7 @@
                     sourcesHtml = `
                         <div style="margin-top: 14px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
                             <div style="font-family: 'Playfair Display', serif; font-weight: bold; font-size: 12px; color: #0a0f1d; margin-bottom: 6px;">
-                                CITED STATUTORY AUTHORITIES & PRECEDENTS (${t.sources.length}):
+                                CITED STATUTORY AUTHORITIES & PRECEDENTS (${uniqueSources.length}):
                             </div>
                             <table style="width: 100%; border-collapse: collapse; text-align: left;">
                                 <thead>
@@ -908,23 +909,60 @@
             return doc.body.innerHTML;
         }
 
+        function cleanCitationTitle(title, gr_no = "", category = "") {
+            if (!title || !title.trim()) return gr_no || "Philippine Legal Authority";
+            const t = title.trim();
+            if (t.toLowerCase().startsWith("gr_") || t.toLowerCase().startsWith("ra_") || t.toLowerCase().endsWith(".html") || t.toLowerCase().endsWith(".php")) {
+                const m = t.match(/(?:gr|ra)_(\d+)/i);
+                if (m) {
+                    const prefix = t.toLowerCase().includes("ra") ? "Republic Act No." : "G.R. No.";
+                    const cat = t.toLowerCase().includes("ra") ? "Republic Act" : "Supreme Court Decision";
+                    return `${prefix} ${m[1]} (${cat})`;
+                }
+            }
+            return t;
+        }
+
+        function deduplicateSources(sources) {
+            if (!sources || !Array.isArray(sources)) return [];
+            const seen = new Set();
+            const unique = [];
+            for (const s of sources) {
+                const gr = (s.gr_no || "").trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const law = (s.law_no || "").trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const title = (s.title || "").trim().toLowerCase();
+                const docId = (s.doc_id || "").trim().toLowerCase();
+                const key = gr || law || docId || title;
+                if (key && !seen.has(key)) {
+                    seen.add(key);
+                    unique.push(s);
+                } else if (!key) {
+                    unique.push(s);
+                }
+            }
+            return unique;
+        }
+
         function renderSourcesDrawer(sources) {
             const drawer = document.getElementById('landingSourcesDrawer');
             const chipsContainer = document.getElementById('landingSourceChips');
             const countEl = document.getElementById('landingSourceCount');
 
-            if (!sources || sources.length === 0) {
+            const unique = deduplicateSources(sources);
+            currentRetrievedSources = unique;
+
+            if (!unique || unique.length === 0) {
                 drawer.classList.add('hidden');
                 return;
             }
 
-            countEl.textContent = sources.length;
+            countEl.textContent = unique.length;
             chipsContainer.innerHTML = "";
 
-            sources.forEach((s, idx) => {
+            unique.forEach((s, idx) => {
                 const tag = document.createElement('button');
                 tag.className = 'citation-tag flex items-center gap-1.5';
-                const label = s.title || s.law_no || s.gr_no || `Doc ${idx+1}`;
+                const label = cleanCitationTitle(s.title || s.law_no || s.gr_no || `Doc ${idx+1}`);
                 const score = s.score ? ` (${(s.score * 100).toFixed(0)}%)` : '';
                 
                 const status = (s.doctrine_status || 'good_law').toLowerCase();
