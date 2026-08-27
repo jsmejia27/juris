@@ -3,6 +3,13 @@ legal_ai_env/
 venv/
 env/
 .env
+*.env
+.env*
+secrets/
+
+# Admin OTP & Authentication Secrets
+config/admin_otp.json
+config/admin_auth.json
 
 # Python Cache
 __pycache__/

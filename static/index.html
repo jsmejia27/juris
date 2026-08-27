@@ -445,7 +445,7 @@
         let cooldownSecondsRemaining = 0;
         let cooldownInterval = null;
 
-        function startChatCooldownTimer(seconds = 20) {
+        function startChatCooldownTimer(seconds = 60) {
             cooldownSecondsRemaining = seconds;
             const input = document.getElementById('chatInput');
             const sendBtn = document.getElementById('sendBtn');
@@ -529,8 +529,14 @@
             if (!message) return;
 
             input.value = "";
+            input.disabled = true;
+            input.placeholder = "⏳ Juris is processing and synthesizing legal response...";
             isGenerating = true;
-            document.getElementById('sendBtn').disabled = true;
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = `<span>Processing...</span>`;
+            }
 
             const category = document.getElementById('corpusCategoryFilter').value;
             const container = document.getElementById('messagesContainer');
@@ -685,7 +691,7 @@
                 isGenerating = false;
                 container.scrollTop = container.scrollHeight;
                 lucide.createIcons();
-                startChatCooldownTimer(20);
+                startChatCooldownTimer(60);
             }
         }
 

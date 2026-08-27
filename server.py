@@ -253,8 +253,15 @@ async def chat_stream(req: ChatRequest):
 # ==========================================
 
 ADMIN_USERNAME = os.getenv("JURIS_ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD", "Mangaldan2026")
-SESSION_SECRET = os.getenv("JURIS_SESSION_SECRET", "juris_session_secret_2026_mangaldan_sovereign")
+ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    ADMIN_PASSWORD = os.getenv("JURIS_DEV_ADMIN_PASS", secrets.token_urlsafe(16))
+    logger.warning("JURIS_ADMIN_PASSWORD not set in environment. Ephemeral key generated for this session.")
+
+SESSION_SECRET = os.getenv("JURIS_SESSION_SECRET")
+if not SESSION_SECRET:
+    SESSION_SECRET = secrets.token_hex(32)
+
 OTP_CONFIG_PATH = os.path.join("config", "admin_otp.json")
 
 def get_or_create_otp_secret() -> str:
