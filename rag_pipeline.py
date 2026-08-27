@@ -24,7 +24,7 @@ DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_EMBED_MODEL = "qwen3-embedding:4b"
 DEFAULT_LLM_MODEL = "qwen3.5:9b"
 
-SYSTEM_PROMPT_TEMPLATE = """You are **Juris**, an AI Legal Research Assistant specializing in **Philippine laws, statutes, Republic Acts, regulations, and Supreme Court jurisprudence**.
+SYSTEM_PROMPT_TEMPLATE = """You are **Juris**, an AI Legal Research Assistant specializing in **Philippine laws, statutes, Republic Acts, Supreme Court jurisprudence, and Executive & Administrative Issuances (Executive Orders, Presidential Proclamations, Administrative Orders, Memorandum Orders, Memorandum Circulars, and Presidential Decrees)**.
 
 Your purpose is to explain Philippine legal information clearly, accurately, and practically using **ONLY the legal materials provided in the retrieved context**.
 
@@ -56,6 +56,7 @@ Do NOT invent or assume:
 * Republic Acts
 * Presidential Decrees
 * Executive Orders
+* Administrative Orders / Proclamations / Memorandum Circulars
 * Department Orders
 * regulations
 * Supreme Court decisions
@@ -90,21 +91,22 @@ Write the answer following a structured, comprehensive, and highly accessible Ph
 The response should feel:
 
 * authoritative, structured, and legally sound
-* clear and practical for non-lawyers, employers, and employees
+* clear and practical for non-lawyers, legal researchers, employers, and citizens
 * organized into logical sections with clear bold headers, statutory callouts, and bulleted compliance requisites
 
 Structure the answer as follows:
 
-1. **Direct Overview & Legal Basis**: State the primary governing Philippine law directly in the opening paragraph. Bold all official statute names (e.g. **Solo Parents' Welfare Act of 2000 (Republic Act No. 8972)**).
-2. **Numbered Provisions with Inline Citations**: Use descriptive numbered headings with inline citation tags (e.g. `#### 1. The Solo Parent Leave Benefit ( [RA 8972]¹ , as amended by [RA 11861]² )`). Explain the rule in short, readable paragraphs.
-3. **Verbatim Statutory Excerpt**: Quote the exact section or rule from the retrieved documents inside a blockquote `> "..."` with proper attribution: `> — RA XXXX Section Y`.
+1. **Direct Overview & Legal Basis**: State the primary governing Philippine authority directly in the opening paragraph. Bold all official law names and executive issuances (e.g. **Solo Parents' Welfare Act of 2000 (Republic Act No. 8972)**, **Executive Order No. 209 (Family Code of the Philippines)**, or **Proclamation No. 1081**).
+2. **Numbered Provisions with Inline Citations**: Use descriptive numbered headings with inline citation tags (e.g. `#### 1. The Solo Parent Leave Benefit ( [RA 8972]¹ , as amended by [RA 11861]² )` or `#### 2. Regulatory Directives ( [EO 292]¹ , [AO 25]² )`). Explain the rule in short, readable paragraphs.
+3. **Verbatim Excerpt / Statutory Directives**: Quote the exact section, directive, or article from the retrieved documents inside a blockquote `> "..."` with proper attribution: `> — RA XXXX Section Y` or `> — Executive Order No. XXX Section Y`.
 4. **Key Details / Requisites for Compliance**: Summarize essential requisites or conditions using bullet points with bold lead-ins:
-   * **Fully paid / Rate:** Specific compensation details.
-   * **Eligibility / Service requirement:** Length of service or qualifications.
-   * **Documentation required:** Specific IDs or certificates.
-   * **Exceptions / Non-deductibility:** Relationship with other leaves or rules.
-5. **Practical Takeaways / What You Should Do**: Practical guidance strictly grounded in the retrieved legal text.
+   * **Fully paid / Rate:** Specific compensation or financial details.
+   * **Eligibility / Scope:** Coverage, qualifications, or affected agencies.
+   * **Documentation required:** Specific IDs, permits, or certificates.
+   * **Exceptions / Non-deductibility:** Relationship with other statutes, leaves, or rules.
+5. **Practical Takeaways / What You Should Do**: Practical guidance strictly grounded in the retrieved legal and executive text.
 6. **Case Law / Jurisprudence (when analyzing SC cases)**: Use standard Philippine case digest format: **Facts → Issue → Supreme Court Ruling → Legal Doctrine → Practical Meaning**.
+7. **Executive & Administrative Issuances (when analyzing EOs, Proclamations, AOs, MCs, MOs)**: Explain the **Executive Objective → Policy Directive / Enactment → Implementing Guidelines → Affected Agencies & Covered Persons**.
 
 ==================================================
 LANGUAGE & MULTILINGUAL SUPPORT (TAGALOG / FILIPINO / ENGLISH)
@@ -575,7 +577,69 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
         })
     anchors.extend(ra_sec_matches)
 
-    # 3. Bare RA (Tier 3 - Medium Specificity)
+    # 3. Executive Issuances & Decrees (Tier 2/3 Specificity)
+    # Executive Orders (e.g. EO 209, Executive Order 292)
+    for m in re.finditer(r'\b(?:Executive\s+Order(?:\s+No\.?)?|EO|E\.O\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        eo_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"eo {eo_num}", f"executive order {eo_num}", f"executive order no. {eo_num}"],
+            "raw": m.group(0)
+        })
+
+    # Presidential Decrees (e.g. PD 1987, Presidential Decree No. 442)
+    for m in re.finditer(r'\b(?:Presidential\s+Decree(?:\s+No\.?)?|PD|P\.D\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        pd_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"pd {pd_num}", f"presidential decree {pd_num}", f"presidential decree no. {pd_num}"],
+            "raw": m.group(0)
+        })
+
+    # Proclamations (e.g. Proclamation 1081, Proc. 1081)
+    for m in re.finditer(r'\b(?:Proclamation(?:\s+No\.?)?|Proc\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        proc_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"proclamation {proc_num}", f"proc. {proc_num}", f"proclamation no. {proc_num}"],
+            "raw": m.group(0)
+        })
+
+    # Administrative Orders (e.g. AO 25, Administrative Order 1)
+    for m in re.finditer(r'\b(?:Administrative\s+Order(?:\s+No\.?)?|AO|A\.O\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        ao_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"ao {ao_num}", f"administrative order {ao_num}", f"administrative order no. {ao_num}"],
+            "raw": m.group(0)
+        })
+
+    # Memorandum Circulars & Orders (e.g. MC 10, MO 5)
+    for m in re.finditer(r'\b(?:Memorandum\s+Circular(?:\s+No\.?)?|MC|M\.C\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        mc_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"mc {mc_num}", f"memorandum circular {mc_num}", f"memorandum circular no. {mc_num}"],
+            "raw": m.group(0)
+        })
+    for m in re.finditer(r'\b(?:Memorandum\s+Order(?:\s+No\.?)?|MO|M\.O\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        mo_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"mo {mo_num}", f"memorandum order {mo_num}", f"memorandum order no. {mo_num}"],
+            "raw": m.group(0)
+        })
+
+    # Batas Pambansa & Commonwealth Acts (e.g. BP 22, CA 1)
+    for m in re.finditer(r'\b(?:Batas\s+Pambansa(?:\s+Blg\.?)?|BP|B\.P\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
+        bp_num = m.group(1).strip()
+        anchors.append({
+            "tier": "tier_ra_with_section",
+            "terms": [f"bp {bp_num}", f"batas pambansa {bp_num}", f"batas pambansa blg. {bp_num}"],
+            "raw": m.group(0)
+        })
+
+    # 4. Bare RA (Tier 3 - Medium Specificity)
     ra_matches = list(re.finditer(r'\b(?:Republic\s+Act(?:\s+No\.?)?|RA|R\.A\.?)\s*(\d{3,6})\b', query, re.IGNORECASE))
     for m in ra_matches:
         ra_num = m.group(1).strip()
@@ -585,7 +649,7 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
             "raw": m.group(0)
         })
 
-    # 4. Bare Section / Article (Tier 4 - Low Specificity)
+    # 5. Bare Section / Article (Tier 4 - Low Specificity)
     sec_matches = list(re.finditer(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', query, re.IGNORECASE))
     for m in sec_matches:
         sec_val = m.group(1).strip().lower()
@@ -838,12 +902,46 @@ class LegalRetriever:
         """
         must_conditions = []
         if category and category.lower() != "all":
-            must_conditions.append(
-                models.FieldCondition(
-                    key="category",
-                    match=models.MatchValue(value=category)
+            cat_lower = category.lower()
+            if any(k in cat_lower for k in ["executive", "issuance", "administrative", "order", "proclamation", "circular"]):
+                exec_categories = [
+                    "Executive Order", "Presidential Proclamation", "Administrative Order",
+                    "Memorandum Order", "Memorandum Circular", "Presidential Decree",
+                    "General Order", "Executive Issuance", "Proclamation", "Executive",
+                    "proc", "execord", "ao", "mo", "mc", "presdecs", "genor"
+                ]
+                must_conditions.append(
+                    models.FieldCondition(
+                        key="category",
+                        match=models.MatchAny(any=exec_categories)
+                    )
                 )
-            )
+            elif any(k in cat_lower for k in ["statute", "republic act", "repact", "act", "batas"]):
+                statute_categories = [
+                    "Republic Act", "Batas Pambansa", "Commonwealth Act", "Public Act",
+                    "repacts", "bataspam", "comacts", "acts", "ra2025"
+                ]
+                must_conditions.append(
+                    models.FieldCondition(
+                        key="category",
+                        match=models.MatchAny(any=statute_categories)
+                    )
+                )
+            elif any(k in cat_lower for k in ["case", "jurisprudence", "decision", "court", "sc"]):
+                juris_categories = ["Jurisprudence", "Supreme Court Decision", "judjuris"]
+                must_conditions.append(
+                    models.FieldCondition(
+                        key="category",
+                        match=models.MatchAny(any=juris_categories)
+                    )
+                )
+            else:
+                must_conditions.append(
+                    models.FieldCondition(
+                        key="category",
+                        match=models.MatchValue(value=category)
+                    )
+                )
         if year_min is not None or year_max is not None:
             range_cond = {}
             if year_min is not None:
