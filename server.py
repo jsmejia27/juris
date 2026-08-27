@@ -1,16 +1,21 @@
-# server.py
 import os
 import json
 import asyncio
 import threading
 import logging
+import time
+import hmac
+import hashlib
+import struct
+import base64
+import urllib.parse
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Response, BackgroundTasks, Depends, HTTPException, status, Cookie, Header
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 import pyarrow.parquet as pq
 import secrets
 
@@ -244,24 +249,183 @@ async def chat_stream(req: ChatRequest):
     )
 
 # ==========================================
-# AUTHENTICATION & JURIS MANAGEMENT ENDPOINTS
+# 2-FACTOR AUTHENTICATION (TOTP) & SESSION MANAGEMENT
 # ==========================================
-
-security = HTTPBasic()
 
 ADMIN_USERNAME = os.getenv("JURIS_ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD", "Mangaldan2026")
+SESSION_SECRET = os.getenv("JURIS_SESSION_SECRET", "juris_session_secret_2026_mangaldan_sovereign")
+OTP_CONFIG_PATH = os.path.join("config", "admin_otp.json")
 
-def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
-    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials for Juris Management Console.",
-            headers={"WWW-Authenticate": "Basic"},
+def get_or_create_otp_secret() -> str:
+    env_secret = os.getenv("JURIS_ADMIN_OTP_SECRET")
+    if env_secret and len(env_secret.strip()) >= 16:
+        return env_secret.strip().upper()
+    
+    os.makedirs("config", exist_ok=True)
+    if os.path.exists(OTP_CONFIG_PATH):
+        try:
+            with open(OTP_CONFIG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if "secret" in data and len(data["secret"]) >= 16:
+                    return data["secret"].strip().upper()
+        except Exception as e:
+            logger.warning(f"Error reading {OTP_CONFIG_PATH}: {e}")
+
+    # Generate a fresh 32-character base32 secret (20 bytes)
+    raw = secrets.token_bytes(20)
+    secret = base64.b32encode(raw).decode("utf-8").replace("=", "").upper()
+    try:
+        with open(OTP_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump({
+                "secret": secret,
+                "created_at": time.time(),
+                "issuer": "Juris Philippine Legal AI",
+                "user": ADMIN_USERNAME
+            }, f, indent=2)
+        logger.info(f"Created new Admin OTP Secret in {OTP_CONFIG_PATH}")
+    except Exception as e:
+        logger.warning(f"Could not persist {OTP_CONFIG_PATH}: {e}")
+    return secret
+
+def generate_totp(secret_str: str, time_val: Optional[int] = None) -> str:
+    if time_val is None:
+        time_val = int(time.time())
+    clean_secret = secret_str.strip().upper()
+    padding = "=" * ((8 - len(clean_secret) % 8) % 8)
+    key = base64.b32decode((clean_secret + padding), casefold=True)
+    counter = int(time_val // 30)
+    msg = struct.pack(">Q", counter)
+    digest = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    binary_code = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF
+    return str(binary_code % 1000000).zfill(6)
+
+def verify_totp(otp_input: str, secret_str: str, window: int = 1) -> bool:
+    if not otp_input:
+        return False
+    clean_otp = str(otp_input).strip()
+    if len(clean_otp) != 6 or not clean_otp.isdigit():
+        return False
+    now = int(time.time())
+    for w in range(-window, window + 1):
+        expected = generate_totp(secret_str, now + (w * 30))
+        if secrets.compare_digest(expected, clean_otp):
+            return True
+    return False
+
+def create_session_token(username: str) -> str:
+    timestamp = str(int(time.time()))
+    payload = f"{username}:{timestamp}"
+    signature = hmac.new(SESSION_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{signature}"
+
+def verify_session_token(token: str, max_age_seconds: int = 28800) -> Optional[str]:
+    try:
+        parts = token.split(":")
+        if len(parts) != 3:
+            return None
+        username, timestamp_str, sig = parts
+        timestamp = int(timestamp_str)
+        if time.time() - timestamp > max_age_seconds:
+            return None
+        expected_sig = hmac.new(SESSION_SECRET.encode(), f"{username}:{timestamp_str}".encode(), hashlib.sha256).hexdigest()
+        if secrets.compare_digest(sig, expected_sig):
+            return username
+        return None
+    except Exception:
+        return None
+
+async def verify_admin(
+    request: Request,
+    juris_admin_token: Optional[str] = Cookie(default=None),
+    authorization: Optional[str] = Header(default=None),
+    x_admin_otp: Optional[str] = Header(default=None)
+) -> str:
+    # 1. Check Cookie Session Token
+    if juris_admin_token:
+        user = verify_session_token(juris_admin_token)
+        if user and secrets.compare_digest(user, ADMIN_USERNAME):
+            return user
+
+    # 2. Check Bearer Token
+    if authorization and authorization.startswith("Bearer "):
+        bearer_token = authorization[7:].strip()
+        user = verify_session_token(bearer_token)
+        if user and secrets.compare_digest(user, ADMIN_USERNAME):
+            return user
+
+    # 3. Check HTTP Basic Auth + OTP Header or Password:OTP format
+    if authorization and authorization.startswith("Basic "):
+        try:
+            encoded_creds = authorization[6:].strip()
+            decoded = base64.b64decode(encoded_creds).decode("utf-8")
+            if ":" in decoded:
+                u, p = decoded.split(":", 1)
+                secret = get_or_create_otp_secret()
+                otp_candidate = x_admin_otp
+                if not otp_candidate and ":" in p:
+                    p, otp_candidate = p.rsplit(":", 1)
+
+                correct_user = secrets.compare_digest(u, ADMIN_USERNAME)
+                correct_pass = secrets.compare_digest(p, ADMIN_PASSWORD)
+                correct_otp = verify_totp(otp_candidate, secret) if otp_candidate else False
+
+                if correct_user and correct_pass and correct_otp:
+                    return u
+        except Exception:
+            pass
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Unauthorized. Valid Admin credentials and 6-digit OTP required."
+    )
+
+class AdminLoginRequest(BaseModel):
+    username: str = Field(..., max_length=100)
+    password: str = Field(..., max_length=200)
+    otp: str = Field(..., min_length=6, max_length=6)
+
+@app.post("/api/manage/login")
+async def admin_login(req: AdminLoginRequest, response: Response):
+    correct_user = secrets.compare_digest(req.username, ADMIN_USERNAME)
+    correct_pass = secrets.compare_digest(req.password, ADMIN_PASSWORD)
+    secret = get_or_create_otp_secret()
+    correct_otp = verify_totp(req.otp, secret)
+
+    if not (correct_user and correct_pass and correct_otp):
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Invalid username, password, or 6-digit OTP code."}
         )
-    return credentials.username
+
+    token = create_session_token(req.username)
+    response.set_cookie(
+        key="juris_admin_token",
+        value=token,
+        max_age=28800,
+        httponly=True,
+        samesite="lax"
+    )
+    return {"status": "authenticated", "token": token, "username": req.username}
+
+@app.post("/api/manage/logout")
+async def admin_logout(response: Response):
+    response.delete_cookie("juris_admin_token")
+    return {"status": "logged_out"}
+
+@app.get("/api/manage/otp-setup")
+async def get_otp_setup():
+    secret = get_or_create_otp_secret()
+    issuer = "Juris Philippine Legal AI"
+    uri = f"otpauth://totp/{urllib.parse.quote(issuer)}:{ADMIN_USERNAME}?secret={secret}&issuer={urllib.parse.quote(issuer)}"
+    return {
+        "secret": secret,
+        "username": ADMIN_USERNAME,
+        "issuer": issuer,
+        "otpauth_uri": uri,
+        "format": "RFC 6238 TOTP (6-digit, 30s period)"
+    }
 
 @app.get("/api/manage/stats")
 async def get_admin_stats(auth: str = Depends(verify_admin)):
@@ -517,7 +681,7 @@ async def read_disclaimer():
         return f.read()
 
 @app.get("/manage-juris", response_class=HTMLResponse)
-async def read_manage_juris(auth: str = Depends(verify_admin)):
+async def read_manage_juris():
     with open("static/admin.html", "r", encoding="utf-8") as f:
         return f.read()
 
