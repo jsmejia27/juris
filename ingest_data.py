@@ -226,6 +226,104 @@ def process_juris_records(parquet_path: str, limit: int = None, exclude_ids: set
     logger.info(f"Loaded {len(records)} new/un-ingested Jurisprudence records.")
     return records
 
+def extract_canonical_basename(doc_id: str) -> str:
+    if not doc_id:
+        return ""
+    b = os.path.basename(doc_id).replace('.md', '').replace('.txt', '')
+    for prefix in ['repacts_', 'juris_', 'statutes_', 'executive_', 'consti_']:
+        if b.lower().startswith(prefix):
+            b = b[len(prefix):]
+            break
+    return b.lower().strip()
+
+def process_consolidated_records(parquet_path: str, limit: int = None, exclude_ids: set = None, category_filter: str = None) -> List[Dict[str, Any]]:
+    logger.info(f"Loading consolidated corpus records from: {parquet_path}")
+    pfile = pq.ParquetFile(parquet_path)
+    records = []
+    exclude_set = exclude_ids or set()
+    indexed_basenames = {extract_canonical_basename(i) for i in exclude_set}
+
+    cols = ['id', 'source', 'category', 'year', 'month', 'path', 'basename', 'title', 'content']
+    for batch in pfile.iter_batches(batch_size=2000, columns=cols):
+        for row in batch.to_pylist():
+            if limit and len(records) >= limit:
+                break
+                
+            cat = str(row.get('category', '') or '').lower()
+            if category_filter and category_filter != 'all' and cat != category_filter.lower():
+                continue
+
+            content = str(row.get('content', '') or '')
+            title = str(row.get('title', '') or '')
+            basename = str(row.get('basename', '') or '')
+            if not is_valid_document(content, title, basename):
+                continue
+                
+            raw_id = str(row.get('id', '') or f"{cat}_{basename}")
+            can_base = extract_canonical_basename(basename or raw_id)
+
+            if raw_id in exclude_set or can_base in indexed_basenames:
+                continue
+
+            if cat == 'juris':
+                meta = extract_case_metadata(content, title, basename, row.get('year'))
+                display_cat = "Jurisprudence"
+                gr_no = meta['gr_no']
+                doc_date = meta['date']
+                year = meta['year']
+                ponente = meta['ponente']
+                clean_title = meta['title']
+            elif cat == 'statutes':
+                display_cat = "Statute / Republic Act"
+                clean_title = title if title and not title.lower().startswith(('ra_', 'act_')) else f"Statute: {basename}"
+                gr_no = basename.replace('_', ' ').upper()
+                doc_date = ""
+                year = row.get('year')
+                ponente = ""
+            elif cat == 'executive':
+                display_cat = "Executive Issuance"
+                clean_title = title if title and not title.lower().startswith(('eo_', 'pd_', 'ao_')) else f"Executive Issuance: {basename}"
+                gr_no = basename.replace('_', ' ').upper()
+                doc_date = ""
+                year = row.get('year')
+                ponente = ""
+            elif cat == 'consti':
+                display_cat = "Constitution"
+                clean_title = title or "Constitution of the Republic of the Philippines"
+                gr_no = "CONSTITUTION"
+                doc_date = ""
+                year = row.get('year')
+                ponente = ""
+            else:
+                display_cat = "Philippine Law"
+                clean_title = title or basename
+                gr_no = ""
+                doc_date = ""
+                year = row.get('year')
+                ponente = ""
+
+            records.append({
+                'doc_id': raw_id,
+                'source': cat or 'consolidated',
+                'category': display_cat,
+                'title': clean_title,
+                'gr_no': gr_no or '',
+                'date': doc_date or '',
+                'year': year,
+                'ponente': ponente or '',
+                'summary': '',
+                'key_provisions': '',
+                'tags': '',
+                'keywords': '',
+                'content': content
+            })
+
+        if limit and len(records) >= limit:
+            break
+
+    logger.info(f"Loaded {len(records)} new/un-ingested consolidated records.")
+    return records
+
 def split_legal_sections(text: str, category: str, max_chunk_size: int = 1200, overlap: int = 200) -> List[str]:
     """
     Hierarchical legal chunker:

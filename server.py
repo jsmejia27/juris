@@ -28,6 +28,7 @@ from router import route_query
 from ingest_data import (
     process_repacts_records,
     process_juris_records,
+    process_consolidated_records,
     split_legal_sections,
     load_checkpoint,
     save_checkpoint,
@@ -330,13 +331,22 @@ def run_background_ingestion(source: str, limit: Optional[int], batch_size: int)
         log_msg(f"Loaded existing checkpoint: {len(ingested_ids)} documents already indexed.")
 
         records = []
-        if source in ["repacts", "all"]:
+        if source == "repacts":
             repacts_path = "repacts_with_summary.parquet" if os.path.exists("repacts_with_summary.parquet") else "repacts.parquet"
             records.extend(process_repacts_records(repacts_path, limit=limit, exclude_ids=ingested_ids))
 
-        if source in ["juris", "all"]:
+        elif source == "juris":
             juris_path = "juris.parquet"
             records.extend(process_juris_records(juris_path, limit=limit, exclude_ids=ingested_ids))
+
+        elif source in ["consolidated", "all"]:
+            if os.path.exists("consolidated.parquet"):
+                records.extend(process_consolidated_records("consolidated.parquet", limit=limit, exclude_ids=ingested_ids))
+            else:
+                repacts_path = "repacts_with_summary.parquet" if os.path.exists("repacts_with_summary.parquet") else "repacts.parquet"
+                records.extend(process_repacts_records(repacts_path, limit=limit, exclude_ids=ingested_ids))
+                juris_path = "juris.parquet"
+                records.extend(process_juris_records(juris_path, limit=limit, exclude_ids=ingested_ids))
 
         INGESTION_STATE["total_docs"] = len(records)
         log_msg(f"Loaded {len(records)} candidate documents. Starting text chunking...")
