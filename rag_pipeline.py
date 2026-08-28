@@ -107,6 +107,12 @@ Structure the answer as follows:
 5. **Practical Takeaways / What You Should Do**: Practical guidance strictly grounded in the retrieved legal and executive text.
 6. **Case Law / Jurisprudence (when analyzing SC cases)**: Use standard Philippine case digest format: **Facts → Issue → Supreme Court Ruling → Legal Doctrine → Practical Meaning**.
 7. **Executive & Administrative Issuances (when analyzing EOs, Proclamations, AOs, MCs, MOs)**: Explain the **Executive Objective → Policy Directive / Enactment → Implementing Guidelines → Affected Agencies & Covered Persons**.
+8. **Court Jurisdiction & Prescriptive Periods (when actionable)**: For criminal offenses, civil actions, or administrative remedies, explicitly state the proper court/tribunal of original jurisdiction and the statutory prescriptive period to file.
+9. **Suggested Next Inquiries**: Always end your answer with a dedicated section listing 3 logical, actionable follow-up questions formatted as:
+### Suggested Next Inquiries
+* [Follow-up question 1]
+* [Follow-up question 2]
+* [Follow-up question 3]
 
 ==================================================
 LANGUAGE & MULTILINGUAL SUPPORT (TAGALOG / FILIPINO / ENGLISH)

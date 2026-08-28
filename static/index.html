@@ -702,6 +702,23 @@
         function renderStreamingOutput(container, thought, text, turnIdx = null) {
             let html = "";
 
+            // 1. Precedent Currency / Shepardizing Alert Banner
+            if (activeSourcesList && activeSourcesList.length > 0) {
+                const hasOverruled = activeSourcesList.some(s => ['modified', 'overruled', 'reversed', 'abandoned'].includes((s.doctrine_status || '').toLowerCase()));
+                if (hasOverruled) {
+                    html += `
+                        <div class="mb-3.5 p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl text-amber-950 text-xs flex items-start gap-2.5 shadow-xs">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                            <div class="space-y-0.5">
+                                <strong class="font-bold text-amber-900">Precedent Currency / Shepardizing Notice:</strong>
+                                <p class="text-amber-800 leading-relaxed mb-0">One or more cited authorities in this synthesis have subsequent doctrine modifications or overruling rulings. Verify doctrine history in the sources drawer before court submission.</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // 2. Legal Reasoning Trace
             if (thought) {
                 html += `
                     <details class="thought-box" open>
@@ -711,9 +728,19 @@
                 `;
             }
 
+            // 3. Response Prose & Suggested Next Inquiries
             if (text) {
+                let mainText = text;
+                let suggestedInquiries = [];
+                const matchInquiries = text.match(/###\s+(?:Suggested\s+Next\s+Inquiries|Suggested\s+Legal\s+Follow-Ups|Suggested\s+Follow-Up\s+Inquiries)[\s\S]*$/i);
+                if (matchInquiries) {
+                    mainText = text.substring(0, matchInquiries.index).trim();
+                    const lines = matchInquiries[0].split('\n').filter(l => l.trim().startsWith('*') || l.trim().startsWith('-') || /^\d+\./.test(l.trim()));
+                    suggestedInquiries = lines.map(l => l.replace(/^[\*\-\d\.\s]+/, '').trim()).filter(l => l.length > 5);
+                }
+
                 // Convert [RA XXXX]¹ into citation pills
-                let formatted = text.replace(/\[([A-Za-z0-9\s\.\,\-\–]+)\]([¹²³⁴⁵⁶⁷⁸⁹])/g, function(match, citeText, num) {
+                let formatted = mainText.replace(/\[([A-Za-z0-9\s\.\,\-\–]+)\]([¹²³⁴⁵⁶⁷⁸⁹])/g, function(match, citeText, num) {
                     return `<span class="citation-pill" onclick="openCitationByText('${citeText.trim()}')">${citeText.trim()} <sup>${num}</sup></span>`;
                 });
 
@@ -721,9 +748,34 @@
                 const styledHtml = enhanceBlockquotes(rawParsed);
                 const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
                 html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
+
+                // Render Dynamic Contextual Follow-Up Prompts
+                if (suggestedInquiries.length > 0) {
+                    const chips = suggestedInquiries.map(q => {
+                        const safeQ = escapeHtml(q).replace(/'/g, "\\'");
+                        return `
+                            <button onclick="sendSuggestedQuery('${safeQ}')" class="text-left text-xs bg-amber-50/90 hover:bg-amber-100 text-amber-950 border border-amber-300/80 rounded-xl px-3.5 py-2 transition flex items-center gap-2 shadow-xs group font-medium">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold group-hover:scale-110 transition-transform shrink-0"></i>
+                                <span>${escapeHtml(q)}</span>
+                            </button>
+                        `;
+                    }).join('');
+
+                    html += `
+                        <div class="mt-4 pt-3.5 border-t border-slate-100">
+                            <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-900 mb-2.5">
+                                <i data-lucide="compass" class="w-3.5 h-3.5 text-gold"></i>
+                                <span>Suggested Next Inquiries:</span>
+                            </div>
+                            <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+                                ${chips}
+                            </div>
+                        </div>
+                    `;
+                }
             }
 
-            // If turn is finalized, add the action toolbar
+            // 4. Action toolbar
             if (turnIdx !== null) {
                 html += `
                     <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
@@ -746,6 +798,19 @@
             }
 
             container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function sendSuggestedQuery(queryText) {
+            if (chatCooldownSeconds > 0) {
+                alert(`Please wait ${chatCooldownSeconds} seconds before sending another inquiry.`);
+                return;
+            }
+            const input = document.getElementById('chatInput');
+            if (input) {
+                input.value = queryText;
+                handleSend();
+            }
         }
 
         function copyTurnResponse(turnIdx) {
@@ -1011,6 +1076,31 @@
 
             titleEl.textContent = source.title || source.law_no || source.gr_no || 'Document Details';
 
+            let externalLinks = [];
+            if (source.gr_no) {
+                const grClean = encodeURIComponent(source.gr_no.trim());
+                externalLinks.push(`
+                    <a href="https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/1/${grClean}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-600"></i>
+                        <span>SC E-Library</span>
+                    </a>
+                `);
+            }
+            if (source.law_no || (source.category && source.category.includes('Republic Act'))) {
+                externalLinks.push(`
+                    <a href="https://www.officialgazette.gov.ph/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>Official Gazette</span>
+                    </a>
+                `);
+            }
+            externalLinks.push(`
+                <button onclick="copyFormalCitation(${index})" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600"></i>
+                    <span>Copy Formal SC Citation</span>
+                </button>
+            `);
+
             bodyEl.innerHTML = `
                 <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono">
                     <div><strong>Category:</strong> ${source.category || 'Philippine Law'}</div>
@@ -1019,6 +1109,10 @@
                     ${source.gr_no ? `<div><strong>G.R. / Bill:</strong> ${escapeHtml(source.gr_no)}</div>` : ''}
                     ${source.date ? `<div><strong>Date Enacted/Decided:</strong> ${escapeHtml(source.date)}</div>` : ''}
                     ${source.ponente ? `<div><strong>Ponente / Author:</strong> ${escapeHtml(source.ponente)}</div>` : ''}
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    ${externalLinks.join('')}
                 </div>
 
                 ${source.summary ? `
@@ -1039,6 +1133,20 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             lucide.createIcons();
+        }
+
+        function copyFormalCitation(index) {
+            const s = activeSourcesList[index];
+            if (!s) return;
+            let cite = "";
+            if (s.gr_no) {
+                cite = `${cleanCitationTitle(s.title || "Case Title")}, ${s.gr_no}${s.date ? `, ${s.date}` : ""}.`;
+            } else if (s.law_no) {
+                cite = `${s.title || "Statute Title"}, ${s.law_no}${s.date ? ` (${s.date})` : ""}.`;
+            } else {
+                cite = s.title || "Philippine Legal Authority";
+            }
+            navigator.clipboard.writeText(cite).then(() => alert(`Copied formal citation to clipboard:\n${cite}`));
         }
 
         function openCitationByText(citeText) {
