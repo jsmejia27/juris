@@ -279,8 +279,8 @@
             </a>
         </div>
 
-        <!-- Center Controls: Category Filter & Model Selector (Desktop & Tablet) -->
-        <div class="hidden sm:flex items-center gap-2 sm:gap-3">
+        <!-- Center Controls: Category Filter -->
+        <div class="flex items-center gap-2 sm:gap-3">
             <!-- Corpus Category Filter -->
             <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
                 <i data-lucide="filter" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -290,23 +290,6 @@
                     <option value="Jurisprudence" class="bg-slate-900">Supreme Court Cases</option>
                     <option value="Executive & Administrative Issuances" class="bg-slate-900">Executive & Administrative Issuances</option>
                 </select>
-            </div>
-
-            <!-- Model Switcher Dropdown -->
-            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
-                <i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i>
-                <select id="modelSelect" onchange="changeModel(this.value)" class="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer">
-                    <option value="qwen3.5:9b" selected class="bg-slate-900">qwen3.5:9b (Default)</option>
-                    <option value="qwen3:14b" class="bg-slate-900">qwen3:14b</option>
-                    <option value="llama3.2:latest" class="bg-slate-900">llama3.2:latest</option>
-                    <option value="phi4-mini-reasoning:latest" class="bg-slate-900">phi4-mini-reasoning</option>
-                </select>
-            </div>
-
-            <!-- Hardware Badge -->
-            <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span>RTX 5070 Ti &bull; Qwen3-Embed 4B</span>
             </div>
         </div>
 
