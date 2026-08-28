@@ -688,6 +688,40 @@ async def read_disclaimer():
         return f.read()
 
 # ==========================================
+# GPU HYBRID LEGAL SEARCH ENDPOINT
+# ==========================================
+
+class LegalSearchRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=1000)
+    category: Optional[str] = None
+    top_k: int = Field(default=4, ge=1, le=20)
+    score_threshold: float = Field(default=0.20, ge=0.0, le=1.0)
+
+@app.post("/api/legal/search")
+async def search_legal_authorities(req: LegalSearchRequest):
+    """
+    Asynchronous legal search endpoint utilizing GPU BGE-M3 + Qdrant RRF + Jina Cross-Encoder.
+    """
+    try:
+        from legal_retrieval_engine import LegalRetrievalService
+        service = LegalRetrievalService()
+        chunks = await service.retrieve_and_rerank_legal_context(
+            query=req.query,
+            category_filter=req.category,
+            top_k_candidates=30,
+            final_top_k=req.top_k,
+            score_threshold=req.score_threshold
+        )
+        return {
+            "query": req.query,
+            "total_retrieved": len(chunks),
+            "results": [c.dict() for c in chunks]
+        }
+    except Exception as e:
+        logger.error(f"Error in /api/legal/search: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ==========================================
 # FEEDBACK & CAPTCHA ENDPOINTS
 # ==========================================
 

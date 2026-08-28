@@ -739,13 +739,28 @@ def apply_lexical_anchor_boost(
 class LegalCrossEncoderRanker:
     """
     Unified Cross-Encoder Reranker supporting:
-    1. 'BAAI/bge-reranker-base' via FastEmbed (~500MB ONNX, high precision)
-    2. 'ms-marco-TinyBERT-L-2-v2' via FlashRank (lightweight baseline)
+    1. 'jinaai/jina-reranker-v2-base-multilingual' or 'BAAI/bge-reranker-v2-m3' via GPU PyTorch
+    2. 'BAAI/bge-reranker-base' via FastEmbed ONNX
+    3. 'ms-marco-TinyBERT-L-2-v2' via FlashRank
     """
     def __init__(self, model_name: str = DEFAULT_RERANKER_MODEL):
         self.model_name = model_name
+        self._gpu_model_manager = None
         self._bge_ranker = None
         self._flash_ranker = None
+        self.engine_type = "flashrank"
+
+        # Try initializing GPU Cross-Encoder from legal_retrieval_engine
+        try:
+            from legal_retrieval_engine import LegalModelManager
+            manager = LegalModelManager.get_instance()
+            if manager.reranker_model is not None:
+                self._gpu_model_manager = manager
+                self.engine_type = "gpu_cross_encoder"
+                logger.info(f"Initialized GPU Cross-Encoder: {manager.reranker_model_name}")
+                return
+        except Exception as gpu_err:
+            logger.debug(f"GPU model manager bypassed: {gpu_err}")
 
         if "bge" in model_name.lower():
             try:
@@ -771,7 +786,19 @@ class LegalCrossEncoderRanker:
             for doc in candidate_docs
         ]
 
-        if self.engine_type == "bge" and self._bge_ranker is not None:
+        if self.engine_type == "gpu_cross_encoder" and self._gpu_model_manager is not None:
+            scores = self._gpu_model_manager.rerank_pairs(query, doc_passages)
+            indexed_scores = [(idx, float(score)) for idx, score in enumerate(scores)]
+            sorted_scores = sorted(indexed_scores, key=lambda x: x[1], reverse=True)[:top_k]
+            reranked_docs = []
+            for idx, score in sorted_scores:
+                doc = dict(candidate_docs[idx])
+                doc["rerank_score"] = score
+                doc["score"] = score
+                doc["reranker_model"] = self._gpu_model_manager.reranker_model_name
+                reranked_docs.append(doc)
+            return reranked_docs
+        elif self.engine_type == "bge" and self._bge_ranker is not None:
             results = list(self._bge_ranker.rerank(query, doc_passages))
             indexed_scores = [(idx, float(score)) for idx, score in enumerate(results)]
             sorted_scores = sorted(indexed_scores, key=lambda x: x[1], reverse=True)[:top_k]
