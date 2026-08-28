@@ -544,7 +544,9 @@
             const assistantWrapper = document.createElement('div');
             assistantWrapper.className = 'flex flex-col items-start w-full';
             
+            const currentTurnIdx = sessionTurns.length;
             const assistantCard = document.createElement('div');
+            assistantCard.id = `assistant-card-${currentTurnIdx}`;
             assistantCard.className = 'bg-white border border-slate-200 rounded-2xl p-5 shadow-sm w-full text-slate-800 text-sm';
             assistantCard.innerHTML = `
                 <div class="flex items-center gap-2 text-slate-400 text-xs font-mono">
@@ -556,7 +558,8 @@
             container.appendChild(assistantWrapper);
             container.scrollTop = container.scrollHeight;
 
-            let accumulatedText = "";
+            let accumulatedTab1 = "";
+            let accumulatedTab2 = "";
             let accumulatedThought = "";
             let sources = [];
             activeSourcesList = [];
@@ -564,13 +567,15 @@
             // Add to session history
             chatSessionHistory.push({ role: 'user', content: message });
 
-            const currentTurnIdx = sessionTurns.length;
             const currentTurnData = {
                 turnNumber: currentTurnIdx + 1,
                 userQuery: message,
                 category: category || "All Philippine Law",
                 timestamp: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+                tab1Response: "",
+                tab2Response: "",
                 assistantResponse: "",
+                activeTab: 1,
                 thought: "",
                 sources: []
             };
@@ -628,6 +633,7 @@
                                 } else if (parsed.type === "sources") {
                                     sources = parsed.sources || [];
                                     activeSourcesList = sources;
+                                    currentTurnData.sources = sources.slice();
                                     renderSourcesDrawer(sources);
                                     if (!hasReceivedContent) {
                                         assistantCard.innerHTML = `
@@ -640,22 +646,35 @@
                                 } else if (parsed.type === "thought") {
                                     hasReceivedContent = true;
                                     accumulatedThought += parsed.thought;
-                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                    currentTurnData.thought = accumulatedThought;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                 } else if (parsed.type === "token") {
                                     hasReceivedContent = true;
-                                    accumulatedText += parsed.token;
-                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                    if (parsed.tab === 2) {
+                                        accumulatedTab2 += parsed.token;
+                                        currentTurnData.tab2Response = accumulatedTab2;
+                                    } else {
+                                        accumulatedTab1 += parsed.token;
+                                        currentTurnData.tab1Response = accumulatedTab1;
+                                    }
+                                    currentTurnData.assistantResponse = currentTurnData.activeTab === 2 ? (currentTurnData.tab2Response || currentTurnData.tab1Response) : currentTurnData.tab1Response;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     container.scrollTop = container.scrollHeight;
+                                } else if (parsed.type === "tab1_done" || parsed.type === "tab2_done") {
+                                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                 } else if (parsed.type === "verification") {
                                     const vSummary = parsed.summary;
-                                    if (vSummary && vSummary.annotated_prose) {
-                                        accumulatedText = vSummary.annotated_prose;
-                                        renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText, currentTurnIdx);
+                                    if (vSummary && vSummary.annotated_prose && (!parsed.tab || parsed.tab === 1)) {
+                                        accumulatedTab1 = vSummary.annotated_prose;
+                                        currentTurnData.tab1Response = accumulatedTab1;
+                                        currentTurnData.assistantResponse = currentTurnData.activeTab === 2 ? currentTurnData.tab2Response : currentTurnData.tab1Response;
+                                        renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     }
                                 } else if (parsed.type === "error") {
                                     hasReceivedContent = true;
-                                    accumulatedText += `\n\n**Error:** ${parsed.error}`;
-                                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText);
+                                    accumulatedTab1 += `\n\n**Error:** ${parsed.error}`;
+                                    currentTurnData.tab1Response = accumulatedTab1;
+                                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                 }
                             } catch (err) {
                                 console.error("Error parsing JSON SSE line:", err);
@@ -670,12 +689,13 @@
                     </div>
                 `;
             } finally {
-                if (accumulatedText && accumulatedText.trim()) {
-                    chatSessionHistory.push({ role: 'assistant', content: accumulatedText.trim() });
-                    currentTurnData.assistantResponse = accumulatedText.trim();
+                const finalActiveText = currentTurnData.activeTab === 2 ? (currentTurnData.tab2Response || currentTurnData.tab1Response) : (currentTurnData.tab1Response || currentTurnData.tab2Response);
+                if (finalActiveText && finalActiveText.trim()) {
+                    chatSessionHistory.push({ role: 'assistant', content: finalActiveText.trim() });
+                    currentTurnData.assistantResponse = finalActiveText.trim();
                     currentTurnData.thought = accumulatedThought;
                     currentTurnData.sources = activeSourcesList.slice();
-                    renderStreamingOutput(assistantCard, accumulatedThought, accumulatedText, currentTurnIdx);
+                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                 }
                 isGenerating = false;
                 container.scrollTop = container.scrollHeight;
@@ -684,8 +704,28 @@
             }
         }
 
-        function renderStreamingOutput(container, thought, text, turnIdx = null) {
+        function switchTurnTab(turnIdx, tabNum) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn) return;
+            turn.activeTab = tabNum;
+            const card = document.getElementById(`assistant-card-${turnIdx}`);
+            if (card) {
+                renderStreamingOutput(card, turn.thought, turn, turnIdx);
+            }
+        }
+
+        function renderStreamingOutput(container, thought, turnDataOrText, turnIdx = null) {
             let html = "";
+
+            const isTurnObj = turnDataOrText && typeof turnDataOrText === 'object';
+            const turn = isTurnObj ? turnDataOrText : {
+                activeTab: 1,
+                tab1Response: typeof turnDataOrText === 'string' ? turnDataOrText : '',
+                tab2Response: '',
+                assistantResponse: typeof turnDataOrText === 'string' ? turnDataOrText : ''
+            };
+            const activeTab = turn.activeTab || 1;
+            const text = (activeTab === 2 ? (turn.tab2Response || turn.assistantResponse) : (turn.tab1Response || turn.assistantResponse)) || "";
 
             // 1. Precedent Currency / Shepardizing Alert Banner
             if (activeSourcesList && activeSourcesList.length > 0) {
@@ -759,22 +799,39 @@
                         </div>
                     `;
                 }
+            } else if (activeTab === 2 && !turn.tab2Response) {
+                html += `
+                    <div class="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 text-xs font-mono">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1.5"></span>
+                        <span>Synthesizing Executive Editorial Digest...</span>
+                    </div>
+                `;
             }
 
-            // 4. Action toolbar
+            // 4. Response Tabs & Action Toolbar (Tabs placed above copy and download PDF button)
             if (turnIdx !== null) {
                 html += `
-                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
-                        <div class="flex items-center gap-1.5 text-slate-400">
-                            <i data-lucide="scale" class="w-3.5 h-3.5 text-gold"></i>
-                            <span>Turn ${turnIdx + 1} &bull; Grounded in Law</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="copyTurnResponse(${turnIdx})" class="px-2.5 py-1 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
-                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                <span>Copy</span>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <!-- Dual Response Format Selection Tabs -->
+                        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 shrink-0">
+                            <button onclick="switchTurnTab(${turnIdx}, 1)" id="tab1-btn-${turnIdx}" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 1 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                <i data-lucide="scroll" class="w-3.5 h-3.5 ${activeTab === 1 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                                <span>📜 In-Depth Treatise</span>
                             </button>
-                            <button onclick="exportSingleTurnPDF(${turnIdx})" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-lg transition flex items-center gap-1 font-semibold shadow-2xs">
+                            <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                                <span>📋 Executive Digest</span>
+                                ${!turn.tab2Response && isGenerating ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ''}
+                            </button>
+                        </div>
+
+                        <!-- Action Buttons: Copy & Download PDF (Bound to Active Tab) -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyTurnResponse(${turnIdx})" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 text-xs font-medium shadow-2xs">
+                                <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500"></i>
+                                <span id="copy-btn-text-${turnIdx}">Copy (${activeTab === 1 ? 'Treatise' : 'Digest'})</span>
+                            </button>
+                            <button onclick="exportSingleTurnPDF(${turnIdx})" class="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold shadow-2xs">
                                 <i data-lucide="download" class="w-3.5 h-3.5 text-gold"></i>
                                 <span>Download PDF</span>
                             </button>
@@ -803,16 +860,27 @@
 
         function copyTurnResponse(turnIdx) {
             const turn = sessionTurns[turnIdx];
-            if (!turn || !turn.assistantResponse) return;
-            navigator.clipboard.writeText(turn.assistantResponse).then(() => {
-                alert("Legal response copied to clipboard!");
+            if (!turn) return;
+            const textToCopy = turn.activeTab === 2 ? (turn.tab2Response || turn.assistantResponse) : (turn.tab1Response || turn.assistantResponse);
+            if (!textToCopy) return;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btnText = document.getElementById(`copy-btn-text-${turnIdx}`);
+                if (btnText) {
+                    const orig = btnText.innerText;
+                    btnText.innerText = "✓ Copied!";
+                    setTimeout(() => { btnText.innerText = orig; }, 2000);
+                } else {
+                    alert("Legal response copied to clipboard!");
+                }
             });
         }
 
         function exportSingleTurnPDF(turnIdx) {
             const turn = sessionTurns[turnIdx];
             if (!turn) return;
-            exportTurnsToPDF([turn], `Turn_${turnIdx + 1}`);
+            const activeText = turn.activeTab === 2 ? (turn.tab2Response || turn.assistantResponse) : (turn.tab1Response || turn.assistantResponse);
+            const exportTurn = Object.assign({}, turn, { assistantResponse: activeText });
+            exportTurnsToPDF([exportTurn], `Turn_${turnIdx + 1}_${turn.activeTab === 1 ? 'Treatise' : 'Digest'}`);
         }
 
         function exportConversationPDF() {

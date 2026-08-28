@@ -24,6 +24,8 @@ from rag_pipeline import (
     get_shared_qdrant_client,
     _QDRANT_LOCK,
     SYSTEM_PROMPT_TEMPLATE,
+    PROMPT_TAB1_TREATISE,
+    PROMPT_TAB2_EDITORIAL,
     DEFAULT_STORAGE_DIR,
     DEFAULT_COLLECTION,
     deduplicate_sources,
@@ -210,29 +212,47 @@ async def chat_stream(req: ChatRequest):
         yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources})}\n\n"
         await asyncio.sleep(0.01)
 
-        # 3. Format Context & Multi-Turn Prompt
+        # 3. Format Context & Multi-Turn Prompts for Dual Tabs
         context_str = pipeline.format_context(sources, bills_context=bills_context)
         history_section = pipeline.format_history_section(history_dicts)
-        prompt = SYSTEM_PROMPT_TEMPLATE.format(
+        
+        prompt_tab1 = PROMPT_TAB1_TREATISE.format(
+            history_section=history_section,
+            context=context_str,
+            question=req.message
+        )
+        prompt_tab2 = PROMPT_TAB2_EDITORIAL.format(
             history_section=history_section,
             context=context_str,
             question=req.message
         )
 
-        # Stream LLM tokens asynchronously
-        accumulated_response = []
-        for chunk in pipeline.llm.stream(prompt):
-            accumulated_response.append(chunk)
-            payload = json.dumps({"type": "token", "token": chunk})
+        # Stream Tab 1: In-Depth Legal Treatise
+        accumulated_tab1 = []
+        for chunk in pipeline.llm.stream(prompt_tab1):
+            accumulated_tab1.append(chunk)
+            payload = json.dumps({"type": "token", "tab": 1, "token": chunk})
             yield f"data: {payload}\n\n"
             await asyncio.sleep(0.002)
 
-        # 4. Perform citation and claim verification pass
+        yield f"data: {json.dumps({'type': 'tab1_done'})}\n\n"
+
+        # Stream Tab 2: Executive Editorial Digest
+        accumulated_tab2 = []
+        for chunk in pipeline.llm.stream(prompt_tab2):
+            accumulated_tab2.append(chunk)
+            payload = json.dumps({"type": "token", "tab": 2, "token": chunk})
+            yield f"data: {payload}\n\n"
+            await asyncio.sleep(0.002)
+
+        yield f"data: {json.dumps({'type': 'tab2_done'})}\n\n"
+
+        # 4. Perform citation and claim verification pass on Tab 1
         try:
-            full_text = "".join(accumulated_response)
+            full_text = "".join(accumulated_tab1)
             structured_resp = parse_and_validate_structured_output(full_text)
             v_summary = verify_citations_and_claims(structured_resp, sources, query=req.message)
-            yield f"data: {json.dumps({'type': 'verification', 'summary': v_summary.dict()})}\n\n"
+            yield f"data: {json.dumps({'type': 'verification', 'tab': 1, 'summary': v_summary.dict()})}\n\n"
         except Exception as v_err:
             logger.debug(f"Verification pass error: {v_err}")
 
