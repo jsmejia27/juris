@@ -137,6 +137,38 @@
         }
 
         /* Legal Prose Typography */
+        /* Legal Prose Typography & Responsive Tables */
+        .legal-prose {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        .legal-prose table {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.82rem;
+        }
+        .legal-prose th, .legal-prose td {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            white-space: normal;
+            min-width: 110px;
+        }
+        .legal-prose th {
+            background-color: #f1f5f9;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .legal-prose pre, .legal-prose code {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         .legal-prose h1, .legal-prose h2, .legal-prose h3, .legal-prose h4 {
             font-family: 'Playfair Display', Georgia, serif;
             color: #0a0f1d;
@@ -182,6 +214,8 @@
             color: #475569;
             margin-top: 16px;
             margin-bottom: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .thought-box summary {
             cursor: pointer;
@@ -202,17 +236,17 @@
         }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-bodytext flex flex-col h-screen overflow-hidden selection:bg-amber-100 selection:text-amber-900">
+<body class="bg-[#f8fafc] text-bodytext flex flex-col h-[100dvh] min-h-[100dvh] overflow-hidden selection:bg-amber-100 selection:text-amber-900">
 
     <!-- Top Judicial Header Bar -->
-    <header class="bg-midnight text-white border-b border-slate-800 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-md">
+    <header class="bg-midnight text-white border-b border-slate-800 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-md">
         
         <!-- Left: Brand & Avatar -->
-        <div class="flex items-center gap-3">
-            <a href="/" class="flex items-center gap-2.5 group">
-                <img src="/static/juris.png" alt="Juris Logo" class="w-8 h-8 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
-                <div class="flex items-baseline gap-2">
-                    <span class="font-serif text-xl font-bold text-white tracking-tight">Juris</span>
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <a href="/" class="flex items-center gap-2 group">
+                <img src="/static/juris.png" alt="Juris Logo" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                <div class="flex items-baseline gap-1.5 sm:gap-2">
+                    <span class="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">Juris</span>
                     <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono font-medium uppercase bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full">
                         Philippine Legal AI
                     </span>
@@ -233,8 +267,8 @@
                 </select>
             </div>
 
-            <!-- Model Switcher Dropdown -->
-            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
+            <!-- Model Switcher Dropdown (Desktop & Tablet) -->
+            <div class="hidden sm:flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1">
                 <i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i>
                 <select id="modelSelect" onchange="changeModel(this.value)" class="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer">
                     <option value="qwen3.5:9b" selected class="bg-slate-900">qwen3.5:9b (Default)</option>
@@ -252,45 +286,45 @@
         </div>
 
         <!-- Right Controls: Feedback, PDF Export, Reset & Disclaimer -->
-        <div class="flex items-center gap-2">
-            <a href="/feedback" title="Submit Platform Feedback" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-xs">
-                <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400"></i>
-                <span class="hidden sm:inline font-medium">Feedback</span>
+        <div class="flex items-center gap-1 sm:gap-2">
+            <a href="/feedback" title="Submit Platform Feedback" class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1 sm:gap-1.5 transition-all shadow-xs">
+                <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                <span class="hidden md:inline font-medium">Feedback</span>
             </a>
-            <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-xs">
-                <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400"></i>
-                <span class="hidden sm:inline font-medium">Export PDF</span>
+            <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1 sm:gap-1.5 transition-all shadow-xs">
+                <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                <span class="hidden md:inline font-medium">PDF</span>
             </button>
-            <button onclick="clearChat()" title="Clear Conversation Session" class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Reset</span>
+            <button onclick="clearChat()" title="Clear Conversation Session" class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 shrink-0"></i>
+                <span class="hidden md:inline">Reset</span>
             </button>
-            <a href="/disclaimer" title="Institutional Legal Disclaimer" class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors">
-                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-slate-400"></i>
-                <span class="hidden sm:inline">Disclaimer</span>
+            <a href="/disclaimer" title="Institutional Legal Disclaimer" class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                <span class="hidden md:inline">Terms</span>
             </a>
         </div>
     </header>
 
     <!-- Main Workspace Container (Full Viewport Height) -->
-    <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-3 sm:p-4 overflow-hidden gap-3">
+    <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-2 sm:p-4 overflow-hidden gap-2 sm:gap-3">
         
         <!-- Messages Area Card -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scroll space-y-4 p-4 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
+        <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scroll space-y-3 sm:space-y-4 p-3 sm:p-6 bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-xs">
             
             <!-- Default Welcome Card -->
             <div class="flex flex-col items-start w-full">
-                <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-2xl p-5 sm:p-7 shadow-md w-full border border-slate-800 space-y-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 bg-slate-950">
+                <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl sm:rounded-2xl p-4 sm:p-7 shadow-md w-full border border-slate-800 space-y-3 sm:space-y-4">
+                    <div class="flex items-center gap-2.5 sm:gap-3">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-md shrink-0 bg-slate-950">
                             <img src="/static/juris.png" alt="Juris" class="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <div class="flex items-center gap-2 text-amber-300 text-[11px] font-mono font-semibold uppercase tracking-wider">
+                            <div class="flex items-center gap-2 text-amber-300 text-[10px] sm:text-[11px] font-mono font-semibold uppercase tracking-wider">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                 <span>Sovereign Philippine Legal AI</span>
                             </div>
-                            <h2 class="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">
+                            <h2 class="font-serif text-base sm:text-xl font-bold text-white tracking-tight">
                                 Philippine Legal Research &amp; Jurisprudence Intelligence
                             </h2>
                         </div>
@@ -302,25 +336,25 @@
 
                     <!-- Quick Starter Queries -->
                     <div class="space-y-2 pt-2 border-t border-slate-800">
-                        <div class="text-[11px] font-mono uppercase tracking-wider text-amber-300/80 font-bold">
+                        <div class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-amber-300/80 font-bold">
                             Select Sample Legal Inquiry:
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <button onclick="sendQuickPrompt('What are the rights, privileges, and statutory benefits of solo parents under RA 11861?')" class="text-left px-3.5 py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
-                                <span>📜 Solo Parents Benefits (RA 11861)</span>
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors"></i>
+                            <button onclick="sendQuickPrompt('What are the rights, privileges, and statutory benefits of solo parents under RA 11861?')" class="text-left px-3 py-2 sm:px-3.5 sm:py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
+                                <span class="truncate pr-2">📜 Solo Parents Benefits (RA 11861)</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors"></i>
                             </button>
-                            <button onclick="sendQuickPrompt('Explain the Supreme Court doctrine on psychological incapacity under Article 36 of the Family Code in recent jurisprudence.')" class="text-left px-3.5 py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
-                                <span>⚖️ Psychological Incapacity (Art. 36)</span>
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors"></i>
+                            <button onclick="sendQuickPrompt('Explain the Supreme Court doctrine on psychological incapacity under Article 36 of the Family Code in recent jurisprudence.')" class="text-left px-3 py-2 sm:px-3.5 sm:py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
+                                <span class="truncate pr-2">⚖️ Psychological Incapacity (Art. 36)</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors"></i>
                             </button>
-                            <button onclick="sendQuickPrompt('What is the prescriptive period for filing a cyberlibel case under RA 10175 and Revised Penal Code?')" class="text-left px-3.5 py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
-                                <span>🛡️ Cyberlibel Prescription (RA 10175)</span>
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors"></i>
+                            <button onclick="sendQuickPrompt('What is the prescriptive period for filing a cyberlibel case under RA 10175 and Revised Penal Code?')" class="text-left px-3 py-2 sm:px-3.5 sm:py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
+                                <span class="truncate pr-2">🛡️ Cyberlibel Prescription (RA 10175)</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors"></i>
                             </button>
-                            <button onclick="sendQuickPrompt('What acts constitute economic abuse and what are the requisites under Section 5(i) of RA 9262?')" class="text-left px-3.5 py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
-                                <span>🏛️ Economic Abuse Under RA 9262</span>
-                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors"></i>
+                            <button onclick="sendQuickPrompt('What acts constitute economic abuse and what are the requisites under Section 5(i) of RA 9262?')" class="text-left px-3 py-2 sm:px-3.5 sm:py-2.5 bg-slate-950/80 hover:bg-slate-900 text-slate-200 hover:text-white text-xs font-medium rounded-xl border border-slate-800 hover:border-amber-400/50 transition flex items-center justify-between group shadow-2xs">
+                                <span class="truncate pr-2">🏛️ Economic Abuse Under RA 9262</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors"></i>
                             </button>
                         </div>
                     </div>
@@ -331,42 +365,42 @@
         </div>
 
         <!-- Retrieved Citations Drawer -->
-        <div id="sourcesDrawer" class="hidden bg-white border border-slate-200 rounded-xl p-3 shadow-2xs shrink-0">
+        <div id="sourcesDrawer" class="hidden bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 shadow-2xs shrink-0">
             <div class="flex items-center justify-between mb-1.5 text-xs font-mono">
-                <span class="font-bold text-slate-800 uppercase flex items-center gap-1.5">
-                    <i data-lucide="book-open" class="w-4 h-4 text-gold"></i>
-                    Retrieved Primary Authorities (<span id="sourceCount">0</span>)
+                <span class="font-bold text-slate-800 uppercase flex items-center gap-1.5 text-[11px] sm:text-xs">
+                    <i data-lucide="book-open" class="w-4 h-4 text-gold shrink-0"></i>
+                    Retrieved Authorities (<span id="sourceCount">0</span>)
                 </span>
-                <span class="text-[11px] text-slate-400">Click any authority for verbatim excerpt &amp; official gazette link</span>
+                <span class="text-[10px] sm:text-[11px] text-slate-400">Click authority for excerpt &amp; link</span>
             </div>
-            <div id="sourceChips" class="flex flex-wrap gap-1 max-h-20 overflow-y-auto custom-scroll">
+            <div id="sourceChips" class="flex flex-wrap gap-1 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll">
                 <!-- Dynamically populated chips -->
             </div>
         </div>
 
         <!-- Bottom Chat Input Bar -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm shrink-0">
-            <form id="chatForm" onsubmit="handleSend(event)" class="flex items-center gap-2">
+        <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-sm shrink-0">
+            <form id="chatForm" onsubmit="handleSend(event)" class="flex items-center gap-1.5 sm:gap-2">
                 <div class="relative flex-1">
                     <input 
                         type="text" 
                         id="chatInput" 
                         placeholder="Ask any Philippine legal inquiry, Republic Act, or case doctrine..." 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none transition font-sans pr-10"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-base sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none transition font-sans pr-9"
                         autocomplete="off"
                         required
                     />
-                    <button type="button" onclick="document.getElementById('chatInput').value=''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
-                        <i data-lucide="x" class="w-4 h-4"></i>
+                    <button type="button" onclick="document.getElementById('chatInput').value=''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 transition">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
 
                 <button 
                     type="submit" 
                     id="sendBtn" 
-                    class="px-5 py-3 bg-midnight hover:bg-slate-800 text-gold-light rounded-xl font-bold text-xs tracking-wider uppercase flex items-center gap-2 transition shadow-xs shrink-0"
+                    class="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-midnight hover:bg-slate-800 text-gold-light rounded-xl font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 transition shadow-xs shrink-0"
                 >
-                    <span>Ask Juris</span>
+                    <span class="hidden sm:inline">Ask Juris</span>
                     <i data-lucide="send" class="w-3.5 h-3.5"></i>
                 </button>
             </form>
@@ -808,9 +842,9 @@
 
                     html += `
                         <div class="mt-4 pt-3.5 border-t border-slate-100">
-                            <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-900 mb-2.5">
-                                <i data-lucide="compass" class="w-3.5 h-3.5 text-gold"></i>
-                                <span>Suggested Next Inquiries (Click to populate ask field):</span>
+                            <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold text-amber-900 mb-2">
+                                <i data-lucide="compass" class="w-3.5 h-3.5 text-gold shrink-0"></i>
+                                <span>Suggested Next Inquiries (Click to ask):</span>
                             </div>
                             <div class="flex flex-col sm:flex-row flex-wrap gap-2">
                                 ${chips}
@@ -820,7 +854,7 @@
                 }
             } else if (activeTab === 2 && !turn.tab2Response) {
                 html += `
-                    <div class="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 text-xs font-mono">
+                    <div class="p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 text-xs font-mono">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1.5"></span>
                         <span>Synthesizing Executive Editorial Digest...</span>
                     </div>
@@ -830,28 +864,28 @@
             // 4. Response Tabs & Action Toolbar (Tabs placed above copy and download PDF button)
             if (turnIdx !== null) {
                 html += `
-                    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                         <!-- Dual Response Format Selection Tabs -->
-                        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 shrink-0">
-                            <button onclick="switchTurnTab(${turnIdx}, 1)" id="tab1-btn-${turnIdx}" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 1 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
-                                <i data-lucide="scroll" class="w-3.5 h-3.5 ${activeTab === 1 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 w-full sm:w-auto">
+                            <button onclick="switchTurnTab(${turnIdx}, 1)" id="tab1-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 1 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                <i data-lucide="scroll" class="w-3.5 h-3.5 shrink-0 ${activeTab === 1 ? 'text-amber-600' : 'text-slate-400'}"></i>
                                 <span>📜 In-Depth Treatise</span>
                             </button>
-                            <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
-                                <i data-lucide="file-text" class="w-3.5 h-3.5 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                            <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
                                 <span>📋 Executive Digest</span>
                                 ${!turn.tab2Response && isGenerating ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ''}
                             </button>
                         </div>
 
                         <!-- Action Buttons: Copy & Download PDF (Bound to Active Tab) -->
-                        <div class="flex items-center gap-2">
-                            <button onclick="copyTurnResponse(${turnIdx})" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 text-xs font-medium shadow-2xs">
-                                <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="copyTurnResponse(${turnIdx})" class="flex-1 sm:flex-none justify-center px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 text-xs font-medium shadow-2xs">
+                                <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
                                 <span id="copy-btn-text-${turnIdx}">Copy (${activeTab === 1 ? 'Treatise' : 'Digest'})</span>
                             </button>
-                            <button onclick="exportSingleTurnPDF(${turnIdx})" class="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold shadow-2xs">
-                                <i data-lucide="download" class="w-3.5 h-3.5 text-gold"></i>
+                            <button onclick="exportSingleTurnPDF(${turnIdx})" class="flex-1 sm:flex-none justify-center px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold shadow-2xs">
+                                <i data-lucide="download" class="w-3.5 h-3.5 text-gold shrink-0"></i>
                                 <span>Download PDF</span>
                             </button>
                         </div>
