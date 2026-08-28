@@ -660,8 +660,13 @@
                                     currentTurnData.assistantResponse = currentTurnData.activeTab === 2 ? (currentTurnData.tab2Response || currentTurnData.tab1Response) : currentTurnData.tab1Response;
                                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     container.scrollTop = container.scrollHeight;
-                                } else if (parsed.type === "tab1_done" || parsed.type === "tab2_done") {
+                                } else if (parsed.type === "tab1_done") {
+                                    currentTurnData.activeTab = 2; // Automatically switch to Executive Digest to display it live while being written
                                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
+                                    container.scrollTop = container.scrollHeight;
+                                } else if (parsed.type === "tab2_done") {
+                                    renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
+                                    container.scrollTop = container.scrollHeight;
                                 } else if (parsed.type === "verification") {
                                     const vSummary = parsed.summary;
                                     if (vSummary && vSummary.annotated_prose && (!parsed.tab || parsed.tab === 1)) {
