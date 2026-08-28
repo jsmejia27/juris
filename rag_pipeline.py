@@ -137,7 +137,7 @@ NO OVERCLAIMING & LEGAL DISCLAIMER
 SUGGESTED NEXT INQUIRIES
 ==================================================
 
-Always conclude with a dedicated section listing 3 logical, actionable follow-up questions formatted exactly as:
+Always conclude with a dedicated section listing EXACTLY THREE (3) logical, actionable follow-up questions. Do NOT output more than 3 bullet points:
 ### Suggested Next Inquiries
 * [Follow-up question 1]
 * [Follow-up question 2]

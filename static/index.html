@@ -784,12 +784,26 @@
             // 3. Response Prose & Suggested Next Inquiries
             if (text) {
                 let mainText = text;
+                let planningBlock = "";
+                const planningMatch = mainText.match(/<legal_planning>[\s\S]*?<\/legal_planning>/i);
+                if (planningMatch) {
+                    planningBlock = planningMatch[0];
+                    mainText = mainText.replace(planningMatch[0], "").trim();
+                }
+
                 let suggestedInquiries = [];
-                const matchInquiries = text.match(/###\s+(?:Suggested\s+Next\s+Inquiries|Suggested\s+Legal\s+Follow-Ups|Suggested\s+Follow-Up\s+Inquiries)[\s\S]*$/i);
+                const matchInquiries = mainText.match(/###\s+(?:Suggested\s+Next\s+Inquiries|Suggested\s+Legal\s+Follow-Ups|Suggested\s+Follow-Up\s+Inquiries)[\s\S]*$/i);
                 if (matchInquiries) {
-                    mainText = text.substring(0, matchInquiries.index).trim();
+                    mainText = mainText.substring(0, matchInquiries.index).trim();
                     const lines = matchInquiries[0].split('\n').filter(l => l.trim().startsWith('*') || l.trim().startsWith('-') || /^\d+\./.test(l.trim()));
-                    suggestedInquiries = lines.map(l => l.replace(/^[\*\-\d\.\s]+/, '').trim()).filter(l => l.length > 5);
+                    suggestedInquiries = lines
+                        .map(l => l.replace(/^[\*\-\d\.\s]+/, '').trim())
+                        .filter(l => l.length > 5 && !l.includes('**Facts Retrieved**') && !l.includes('**Applicable Statutes**') && !l.includes('**Analytical Mapping**') && !l.includes('**Gap Identification**'))
+                        .slice(0, 3);
+                }
+
+                if (planningBlock) {
+                    mainText = mainText + "\n\n" + planningBlock;
                 }
 
                 // Convert [RA XXXX]¹ into citation pills
