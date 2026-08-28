@@ -256,9 +256,16 @@
             <button onclick="setCategoryAndFocus('Republic Act')" class="hover:text-midnight transition-colors">Republic Acts</button>
             <button onclick="setCategoryAndFocus('Jurisprudence')" class="hover:text-midnight transition-colors">Supreme Court Cases</button>
             <button onclick="sendQuickQuery('What are the active pending bills in the 20th Congress for divorce and civil partnership?')" class="hover:text-midnight transition-colors">20th Congress Tracker</button>
+            <a href="/feedback" class="hover:text-midnight transition-colors flex items-center gap-1 text-gold font-bold">
+                <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
+                <span>Feedback</span>
+            </a>
         </nav>
 
         <div class="flex items-center gap-3">
+            <a href="/feedback" class="md:hidden text-subtext hover:text-midnight text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
+                <span>Feedback</span>
+            </a>
             <button onclick="setCategoryAndFocus('')" class="inline-flex bg-midnight hover:bg-slate-800 text-gold-light px-4 py-2 rounded-lg font-semibold text-xs tracking-wider uppercase transition-all shadow-sm flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-base">chat</span>
                 <span>Ask Legal AI</span>

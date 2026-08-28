@@ -687,6 +687,98 @@ async def read_disclaimer():
     with open("static/disclaimer.html", "r", encoding="utf-8") as f:
         return f.read()
 
+# ==========================================
+# FEEDBACK & CAPTCHA ENDPOINTS
+# ==========================================
+
+CAPTCHA_SECRET = os.getenv("JURIS_CAPTCHA_SECRET", secrets.token_hex(16))
+
+class FeedbackSubmissionRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=200)
+    phone: Optional[str] = Field(default=None, max_length=50)
+    category: Optional[str] = Field(default="General Feedback", max_length=100)
+    subject: str = Field(..., min_length=3, max_length=200)
+    message: str = Field(..., min_length=10, max_length=5000)
+    captcha_token: str = Field(..., min_length=10, max_length=500)
+    captcha_answer: str = Field(..., min_length=1, max_length=20)
+
+@app.get("/api/feedback/captcha")
+async def get_feedback_captcha():
+    a = secrets.randbelow(18) + 3 # 3 to 20
+    b = secrets.randbelow(15) + 1 # 1 to 15
+    operator = secrets.choice(["+", "-"])
+    
+    if operator == "+":
+        ans = a + b
+        question = f"What is {a} + {b}?"
+    else:
+        if a < b:
+            a, b = b, a
+        ans = a - b
+        question = f"What is {a} - {b}?"
+        
+    ts = str(int(time.time()))
+    payload = f"{ans}:{ts}"
+    sig = hmac.new(CAPTCHA_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    token = f"{ts}:{sig}"
+    
+    return {
+        "question": question,
+        "token": token
+    }
+
+@app.post("/api/feedback")
+async def submit_feedback(req: FeedbackSubmissionRequest, request: Request):
+    email_clean = req.email.strip().lower()
+    if "@" not in email_clean or "." not in email_clean or len(email_clean) < 5:
+        return JSONResponse(status_code=400, content={"error": "A valid email address is mandatory."})
+
+    try:
+        ts_str, sig = req.captcha_token.split(":", 1)
+        ts = int(ts_str)
+        if time.time() - ts > 600:
+            return JSONResponse(status_code=400, content={"error": "CAPTCHA challenge expired. Please refresh and try again."})
+        
+        ans_clean = str(req.captcha_answer).strip()
+        expected_payload = f"{ans_clean}:{ts_str}"
+        expected_sig = hmac.new(CAPTCHA_SECRET.encode(), expected_payload.encode(), hashlib.sha256).hexdigest()
+        
+        if not secrets.compare_digest(sig, expected_sig):
+            return JSONResponse(status_code=400, content={"error": "Incorrect CAPTCHA answer. Please solve the verification challenge."})
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid CAPTCHA token format."})
+
+    os.makedirs("logs", exist_ok=True)
+    submission_entry = {
+        "timestamp": time.time(),
+        "date_str": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "client_ip": request.client.host if request.client else "unknown",
+        "email": email_clean,
+        "phone": req.phone.strip() if req.phone else None,
+        "category": req.category,
+        "subject": req.subject.strip(),
+        "message": req.message.strip(),
+        "user_agent": request.headers.get("user-agent", "unknown")
+    }
+
+    try:
+        with open("logs/feedback_submissions.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(submission_entry, ensure_ascii=False) + "\n")
+        logger.info(f"Received feedback submission from {email_clean} (subject: {req.subject[:30]})")
+    except Exception as e:
+        logger.error(f"Error saving feedback: {e}")
+        return JSONResponse(status_code=500, content={"error": "Could not record feedback submission."})
+
+    return {
+        "status": "success",
+        "message": "Thank you! Your feedback has been securely submitted."
+    }
+
+@app.get("/feedback", response_class=HTMLResponse)
+async def read_feedback():
+    with open("static/feedback.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.get("/manage-juris", response_class=HTMLResponse)
 async def read_manage_juris():
     with open("static/admin.html", "r", encoding="utf-8") as f:

@@ -289,8 +289,12 @@
             </div>
         </div>
 
-        <!-- Right Controls: Export PDF, Reset & Return to Landing -->
+        <!-- Right Controls: Feedback, Export PDF, Reset & Return to Landing -->
         <div class="flex items-center gap-2">
+            <a href="/feedback" title="Submit Platform Feedback" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-xs">
+                <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="hidden sm:inline font-medium">Feedback</span>
+            </a>
             <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-400/30 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-xs">
                 <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400"></i>
                 <span class="hidden sm:inline font-medium">Export PDF</span>

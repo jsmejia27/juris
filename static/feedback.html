@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Submit Platform Feedback | Juris — Philippine Legal AI</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"/>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://gstatic.com" crossorigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        midnight: '#0a0f1d',
+                        gold: '#b8860b',
+                        'gold-light': '#d4af37',
+                        hairline: '#e2e8f0',
+                        subtext: '#475569',
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pt-16 selection:bg-amber-100 selection:text-amber-900">
+    
+    <!-- Institutional Top Navigation Bar -->
+    <header class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md flex justify-between items-center px-4 sm:px-8 lg:px-12 h-16 border-b border-hairline border-t-2 border-t-gold shadow-sm">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2.5 group">
+                <img src="/static/juris.png" alt="Juris Logo" class="w-9 h-9 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                <div class="flex items-baseline gap-2">
+                    <span class="font-serif text-2xl font-bold text-midnight tracking-tight">Juris</span>
+                    <span class="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-mono font-medium uppercase bg-amber-50 text-amber-800 border border-amber-200/80 rounded-full">
+                        Philippine Legal AI
+                    </span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="hidden md:flex gap-8 items-center h-full text-xs font-semibold uppercase tracking-wider text-subtext">
+            <a href="/" class="hover:text-midnight transition-colors">Workspace</a>
+            <a href="/disclaimer" class="hover:text-midnight transition-colors">Disclaimer</a>
+            <a href="/feedback" class="text-gold font-bold flex items-center gap-1">
+                <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
+                <span>Feedback</span>
+            </a>
+        </nav>
+
+        <div class="flex items-center gap-3">
+            <a href="/" class="inline-flex bg-midnight hover:bg-slate-800 text-gold-light px-4 py-2 rounded-lg font-semibold text-xs tracking-wider uppercase transition-all shadow-sm flex items-center gap-1.5">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span>Return to Chat</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-grow py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-10 border border-slate-800 shadow-xl mb-8">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-mono font-semibold uppercase tracking-wider mb-4">
+                <span class="material-symbols-outlined text-sm">rate_review</span>
+                <span>User &amp; Community Feedback</span>
+            </div>
+            <h1 class="font-serif text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight mb-3">
+                Submit Platform Feedback
+            </h1>
+            <p class="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xl">
+                Help us refine Philippine jurisprudence retrieval, suggest statutory datasets, report citation observations, or recommend enhancements to Juris.
+            </p>
+        </div>
+
+        <!-- Feedback Form Container -->
+        <div class="bg-white rounded-3xl border border-hairline p-6 sm:p-10 shadow-sm">
+            
+            <!-- Success Notification Card (Hidden initially) -->
+            <div id="feedbackSuccessCard" class="hidden p-6 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-950 text-center space-y-3">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full mx-auto flex items-center justify-center">
+                    <i data-lucide="check-circle-2" class="w-7 h-7"></i>
+                </div>
+                <h3 class="font-serif text-xl font-bold text-emerald-900">Feedback Successfully Submitted</h3>
+                <p class="text-xs sm:text-sm text-emerald-800 leading-relaxed max-w-md mx-auto">
+                    Thank you! Your feedback and contact details have been securely recorded. Our technical and legal data team will review your submission.
+                </p>
+                <div class="pt-3">
+                    <button onclick="resetFeedbackForm()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition shadow-sm">
+                        Submit Another Feedback
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="feedbackErrorBanner" class="hidden p-4 mb-6 bg-rose-50 border-l-4 border-rose-500 rounded-r-xl text-rose-900 text-xs font-mono">
+            </div>
+
+            <!-- Feedback Submission Form -->
+            <form id="feedbackForm" onsubmit="handleFeedbackSubmit(event)" class="space-y-6">
+                
+                <!-- Feedback Category -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Feedback Category
+                    </label>
+                    <select id="feedbackCategory" class="w-full bg-[#f8fafc] border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition">
+                        <option value="Legal Accuracy / Citation Issue">⚖️ Legal Accuracy / Citation Observation</option>
+                        <option value="Dataset or Missing Statute Request">📚 Dataset / Missing Statute Request</option>
+                        <option value="Bug Report / System Issue">🐛 Bug Report / System Issue</option>
+                        <option value="Feature Suggestion / UI Enhancement">💡 Feature Suggestion / UI Enhancement</option>
+                        <option value="Institutional Partnership / Inquiry">🏛️ Institutional Partnership / Inquiry</option>
+                        <option value="General Feedback" selected>💬 General Feedback</option>
+                    </select>
+                </div>
+
+                <!-- Contact Grid: Email (Mandatory) & Mobile Phone (Optional) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Email Address (Mandatory) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Email Address <span class="text-rose-600 font-bold">*</span>
+                            </label>
+                            <span class="text-[10px] font-mono text-rose-600 font-bold uppercase bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">Mandatory</span>
+                        </div>
+                        <input 
+                            id="feedbackEmail" 
+                            type="email" 
+                            required 
+                            placeholder="counsel@lawfirm.ph" 
+                            class="w-full bg-[#f8fafc] border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition font-mono"
+                        />
+                    </div>
+
+                    <!-- Mobile Phone (Optional) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Mobile Phone
+                            </label>
+                            <span class="text-[10px] font-mono text-slate-500 uppercase bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">Optional</span>
+                        </div>
+                        <input 
+                            id="feedbackPhone" 
+                            type="tel" 
+                            placeholder="+63 912 345 6789" 
+                            class="w-full bg-[#f8fafc] border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition font-mono"
+                        />
+                    </div>
+                </div>
+
+                <!-- Subject Title -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Subject / Topic <span class="text-rose-600 font-bold">*</span>
+                    </label>
+                    <input 
+                        id="feedbackSubject" 
+                        type="text" 
+                        required 
+                        placeholder="Brief summary of your feedback..." 
+                        class="w-full bg-[#f8fafc] border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                    />
+                </div>
+
+                <!-- Detailed Message -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Detailed Message / Description <span class="text-rose-600 font-bold">*</span>
+                    </label>
+                    <textarea 
+                        id="feedbackMessage" 
+                        rows="5" 
+                        required 
+                        placeholder="Please describe your feedback, statute numbers, case citations, or recommendation in detail..." 
+                        class="w-full bg-[#f8fafc] border border-slate-300 rounded-xl p-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition leading-relaxed resize-y"
+                    ></textarea>
+                </div>
+
+                <!-- Security Verification CAPTCHA -->
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-gold"></i>
+                            <span>Security Verification (Anti-Spam CAPTCHA)</span>
+                        </div>
+                        <button type="button" onclick="loadCaptchaChallenge()" class="text-slate-500 hover:text-slate-800 text-xs flex items-center gap-1 font-mono transition" title="Generate New Question">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            <span>Reload Challenge</span>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-3">
+                        <!-- Challenge Question Display -->
+                        <div class="w-full sm:w-auto px-4 py-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-sm font-bold tracking-wide border border-slate-800 flex items-center gap-2 shrink-0">
+                            <span class="material-symbols-outlined text-base text-amber-400">calculate</span>
+                            <span id="captchaQuestionDisplay">Loading challenge...</span>
+                        </div>
+
+                        <!-- Answer Input -->
+                        <input 
+                            id="captchaAnswerInput" 
+                            type="text" 
+                            required 
+                            placeholder="Enter your answer" 
+                            class="w-full flex-1 bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gold focus:ring-1 focus:ring-gold outline-none font-mono font-semibold"
+                            autocomplete="off"
+                        />
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    id="submitBtn" 
+                    type="submit" 
+                    class="w-full py-3.5 bg-midnight hover:bg-slate-800 text-gold-light rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition shadow-md"
+                >
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit Legal Feedback</span>
+                </button>
+
+            </form>
+
+        </div>
+
+    </main>
+
+    <!-- Institutional Footer -->
+    <footer class="w-full py-8 px-4 sm:px-8 bg-slate-900 text-slate-400 text-xs border-t border-slate-800 mt-16">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2.5">
+                <img src="/static/juris.png" alt="Juris" class="w-7 h-7 rounded-md object-cover shadow-xs" />
+                <span class="font-serif font-bold text-white text-sm">Juris Philippine Legal AI</span>
+                <span class="text-slate-600">|</span>
+                <span>© 2026 Republic of the Philippines Law Intelligence</span>
+            </div>
+            <div class="text-center md:text-right max-w-md text-slate-400 text-[11px] leading-relaxed space-y-1">
+                <p>Data sourced from and indexed in collaboration with the <a href="https://bettergov.ph" target="_blank" rel="noopener noreferrer" class="text-gold font-semibold hover:underline">BetterGov.ph</a> Open Legal &amp; Congress Initiative.</p>
+                <div class="flex items-center justify-center md:justify-end gap-2 text-slate-400">
+                    <a href="/disclaimer" class="text-gold font-semibold hover:underline">Legal Disclaimer &amp; Terms</a>
+                    <span class="text-slate-600">&bull;</span>
+                    <a href="/feedback" class="text-gold font-semibold hover:underline">Submit Feedback</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        let currentCaptchaToken = "";
+
+        async function loadCaptchaChallenge() {
+            const display = document.getElementById('captchaQuestionDisplay');
+            display.innerText = "Loading challenge...";
+            try {
+                const res = await fetch('/api/feedback/captcha');
+                const data = await res.json();
+                if (data && data.question && data.token) {
+                    display.innerText = data.question;
+                    currentCaptchaToken = data.token;
+                    document.getElementById('captchaAnswerInput').value = "";
+                }
+            } catch (err) {
+                display.innerText = "Error loading challenge";
+                console.error(err);
+            }
+        }
+
+        async function handleFeedbackSubmit(e) {
+            e.preventDefault();
+            const errBanner = document.getElementById('feedbackErrorBanner');
+            const submitBtn = document.getElementById('submitBtn');
+
+            errBanner.classList.add('hidden');
+
+            const email = document.getElementById('feedbackEmail').value.trim();
+            const phone = document.getElementById('feedbackPhone').value.trim();
+            const category = document.getElementById('feedbackCategory').value;
+            const subject = document.getElementById('feedbackSubject').value.trim();
+            const message = document.getElementById('feedbackMessage').value.trim();
+            const captchaAnswer = document.getElementById('captchaAnswerInput').value.trim();
+
+            if (!email) {
+                errBanner.innerText = "Email address is mandatory.";
+                errBanner.classList.remove('hidden');
+                return;
+            }
+
+            if (!captchaAnswer) {
+                errBanner.innerText = "Please solve the security verification CAPTCHA.";
+                errBanner.classList.remove('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Recording Feedback...</span>`;
+
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        phone: phone || null,
+                        category: category,
+                        subject: subject,
+                        message: message,
+                        captcha_token: currentCaptchaToken,
+                        captcha_answer: captchaAnswer
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    document.getElementById('feedbackForm').classList.add('hidden');
+                    document.getElementById('feedbackSuccessCard').classList.remove('hidden');
+                } else {
+                    errBanner.innerText = data.error || "Failed to submit feedback. Please check your inputs.";
+                    errBanner.classList.remove('hidden');
+                    loadCaptchaChallenge();
+                }
+            } catch (err) {
+                errBanner.innerText = "Connection error: " + err.message;
+                errBanner.classList.remove('hidden');
+                loadCaptchaChallenge();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i><span>Submit Legal Feedback</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        function resetFeedbackForm() {
+            document.getElementById('feedbackForm').reset();
+            document.getElementById('feedbackForm').classList.remove('hidden');
+            document.getElementById('feedbackSuccessCard').classList.add('hidden');
+            document.getElementById('feedbackErrorBanner').classList.add('hidden');
+            loadCaptchaChallenge();
+        }
+
+        // Initialize CAPTCHA on load
+        loadCaptchaChallenge();
+    </script>
+</body>
+</html>
