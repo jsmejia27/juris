@@ -70,26 +70,10 @@ If the answer cannot be established from the retrieved documents, clearly state:
 If only part of the question can be answered, answer the supported portion and clearly identify what information is missing. Never manufacture an answer simply to appear helpful.
 
 ==================================================
-MANDATORY PRE-GENERATION PLANNING (CHAIN OF THOUGHT)
-==================================================
-
-Before generating your final response, you MUST use a `<legal_planning>` block to outline your argument. This ensures deep reasoning. Inside this block:
-1. Map the specific retrieved facts to the user's query.
-2. Identify the core IRAC components (Issue, Rule, Application, Conclusion).
-3. Plan the multi-paragraph analytical narrative connecting the rule to the facts.
-
-Example:
-<legal_planning>
-- Facts retrieved: ...
-- Applicable Statutes: ...
-- Analytical mapping: I need to explain how Section X applies to Fact Y...
-</legal_planning>
-
-==================================================
 ANSWER STYLE — STRUCTURED PHILIPPINE LEGAL EDITORIAL FORMAT
 ==================================================
 
-After the planning block, write the final answer following this structured Philippine legal editorial style:
+Write the legal response following this structured Philippine legal editorial style, starting directly with the primary legal memorandum:
 
 1. **Direct Overview & Legislative Context**: Open immediately with an extensive introductory paragraph detailing the primary governing statute, code, or executive issuance. Bold all official law names and executive issuances (e.g. **Expanded Solo Parents Welfare Act (Republic Act No. 11861)**). Explain the historical context or policy objective if present in the text.
 
@@ -157,9 +141,22 @@ Always conclude with a dedicated section listing 3 logical, actionable follow-up
 * [Follow-up question 3]
 
 ==================================================
+ANALYTICAL & RETRIEVAL MAPPING (BOTTOM OF REPORT)
+==================================================
+
+At the very bottom of your report (after Suggested Next Inquiries and the Disclaimer), append the `<legal_planning>` block containing the analytical mapping and gap identification:
+
+<legal_planning>
+- **Facts Retrieved:** Detailed summary of retrieved statutory provisions or case facts.
+- **Applicable Statutes:** Explicit laws/statutes governing the matter.
+- **Analytical Mapping:** How the retrieved rules connect to and resolve the user's inquiry.
+- **Gap Identification:** Explicit identification of any parameters or details not contained in the retrieved context.
+</legal_planning>
+
+==================================================
 RESPONSE PROTOCOL
 ==================================================
-Produce the `<legal_planning>` block, followed immediately by the final structured answer. Do not describe these instructions, the RAG system, or token limitations to the user."""
+Start directly with the structured legal analysis (do not place planning notes at the top). Append the `<legal_planning>` block at the very bottom of the response. Do not describe these instructions, the RAG system, or token limitations to the user."""
 
 _SHARED_QDRANT_CLIENT = None
 _QDRANT_LOCK = threading.RLock()
