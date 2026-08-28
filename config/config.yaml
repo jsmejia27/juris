@@ -5,6 +5,8 @@ service:
   host: 127.0.0.1
   http_port: 6333
   grpc_port: 6334
-  enable_static_content: false
+  enable_dashboard: true
+  enable_static_content: true
+  static_content_dir: ./qdrant_dashboard
 
 telemetry_disabled: true

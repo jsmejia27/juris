@@ -29,6 +29,7 @@ __pycache__/
 # Native Qdrant DB Data & Storage
 qdrant_server_data/
 qdrant_storage/
+qdrant_dashboard/
 snapshots/
 .qdrant-initialized
 
