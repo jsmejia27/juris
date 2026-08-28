@@ -1201,11 +1201,30 @@ class LegalRetriever:
             logger.warning(f"Re-ranking exception, falling back to boosted candidates: {e}")
             reranked_docs = boosted_candidates
 
-        # 4. Stage 4: Doctrine Currency Filtering & Tagging
-        from doctrine_currency import filter_and_tag_doctrine_currency
-        currency_filtered = filter_and_tag_doctrine_currency(reranked_docs, query)
+        # 4. Stage 4: Temporal Recency Boosting (Modern Jurisprudence Prioritization)
+        from doctrine_currency import apply_temporal_recency_boost, filter_and_tag_doctrine_currency, is_historical_query
+        temporally_boosted = apply_temporal_recency_boost(reranked_docs, query)
 
-        return currency_filtered[:limit]
+        # 5. Stage 5: Doctrine Currency Filtering & Tagging
+        currency_filtered = filter_and_tag_doctrine_currency(temporally_boosted, query)
+
+        # 6. Stage 6: Guaranteed Recency Slot Allocation
+        final_selected = currency_filtered[:limit]
+        if limit >= 4 and not is_historical_query(query):
+            has_modern_juris = any(
+                (d.get("extracted_year") or 0) >= 2015 and any(k in str(d.get("category", "")).lower() for k in ["jurisprudence", "decision", "court", "judjuris", "case"])
+                for d in final_selected
+            )
+            if not has_modern_juris:
+                # Find best modern jurisprudence in the remaining pool
+                for cand in currency_filtered[limit:]:
+                    cand_year = cand.get("extracted_year") or 0
+                    cat_lower = str(cand.get("category", "")).lower()
+                    if cand_year >= 2015 and any(k in cat_lower for k in ["jurisprudence", "decision", "court", "judjuris", "case"]):
+                        final_selected[-1] = cand
+                        break
+
+        return final_selected
 
 DEFAULT_NUM_CTX = 16384  # Expanded 16K context budget for RTX 5070 Ti (16GB VRAM)
 DEFAULT_TEMPERATURE = 0.0

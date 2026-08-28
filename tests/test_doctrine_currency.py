@@ -55,3 +55,36 @@ def test_doctrine_record_metadata():
     assert rec.source_basis == "manually_curated"
     assert rec.ponente == "Leonen, J."
     assert rec.last_verified_date == "2026-06-01"
+
+def test_extract_document_year():
+    from doctrine_currency import extract_document_year
+    assert extract_document_year({"year": 2021}) == 2021
+    assert extract_document_year({"date": "June 15, 2021"}) == 2021
+    assert extract_document_year({"doc_id": "juris:gr_196359_2021.html"}) == 2021
+    assert extract_document_year({"title": "People v. Santos (1995)"}) == 1995
+    assert extract_document_year({"date": "March 3, 1925"}) == 1925
+
+def test_apply_temporal_recency_boost():
+    from doctrine_currency import apply_temporal_recency_boost
+
+    case_1925 = {
+        "title": "Old 1925 Case",
+        "category": "Jurisprudence",
+        "date": "1925",
+        "score": 0.85
+    }
+    case_2021 = {
+        "title": "Modern 2021 Case",
+        "category": "Jurisprudence",
+        "date": "2021",
+        "score": 0.80
+    }
+
+    # Standard query: Modern 2021 case (+0.25) should outrank 1925 case (-0.25)
+    boosted = apply_temporal_recency_boost([case_1925, case_2021], "What is the rule on warrantless arrest?")
+    assert boosted[0]["title"] == "Modern 2021 Case"
+    assert boosted[0]["score"] > boosted[1]["score"]
+
+    # Historical query: 1925 case should retain its natural higher raw score
+    hist_boosted = apply_temporal_recency_boost([case_1925, case_2021], "What was the historical rule under 1925 jurisprudence?")
+    assert hist_boosted[0]["title"] == "Old 1925 Case"

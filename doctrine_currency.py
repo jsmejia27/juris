@@ -145,7 +145,9 @@ KNOWN_DOCTRINE_STATUS: Dict[str, DoctrineRecord] = {
 HISTORICAL_QUERY_PATTERNS = [
     r"\bhistorical\b", r"\bhistory\b", r"\boverruled\b", r"\babandoned\b",
     r"\bbefore\b", r"\bprevious\b", r"\bpreviously\b", r"\bold doctrine\b", r"\bformer\b",
-    r"dating doktrina", r"nakaraan", r"bago ang", r"prior to"
+    r"\bearly cases?\b", r"\bearly jurisprudence\b", r"\bold jurisprudence\b",
+    r"dating doktrina", r"nakaraan", r"bago ang", r"prior to",
+    r"\b19[0-8]\d\b"  # Explicit mentions of years 1900-1989
 ]
 
 def is_historical_query(query: str) -> bool:
@@ -221,6 +223,97 @@ def get_formatted_doctrine_badge(doc: Dict[str, Any], max_age_days: int = DOCTRI
         logger.debug(f"Error parsing last_verified_date {rec.last_verified_date}: {e}")
 
     return "✓ GOOD LAW" if status == "good_law" else status.upper()
+
+def extract_document_year(doc: Dict[str, Any]) -> Optional[int]:
+    """
+    Extracts 4-digit Gregorian calendar year from document payload (year, date, doc_id, or title).
+    """
+    # 1. Check explicit year field
+    year_val = doc.get("year")
+    if year_val:
+        if isinstance(year_val, int) and 1900 <= year_val <= 2030:
+            return year_val
+        m = re.search(r'\b(19\d\d|20\d\d)\b', str(year_val))
+        if m:
+            return int(m.group(1))
+
+    # 2. Check date field (e.g., 'June 15, 2021' or '2021-06-15' or '1997')
+    date_val = str(doc.get("date") or "")
+    if date_val:
+        m = re.search(r'\b(19\d\d|20\d\d)\b', date_val)
+        if m:
+            return int(m.group(1))
+
+    # 3. Check doc_id (e.g., 'juris:gr_196359_2021' or 'repacts:ra_11861_2022')
+    doc_id = str(doc.get("doc_id") or "")
+    if doc_id:
+        m = re.search(r'_(19\d\d|20\d\d)\b', doc_id)
+        if m:
+            return int(m.group(1))
+
+    # 4. Check title
+    title = str(doc.get("title") or "")
+    if title:
+        m = re.search(r'\b(19\d\d|20\d\d)\b', title)
+        if m:
+            return int(m.group(1))
+
+    return None
+
+def apply_temporal_recency_boost(
+    candidates: List[Dict[str, Any]],
+    query: str
+) -> List[Dict[str, Any]]:
+    """
+    Temporal Recency Boost:
+    Prioritizes modern controlling Supreme Court jurisprudence (2015-2026) over century-old cases,
+    while preserving historic landmarks when historical intent is detected in the query.
+    """
+    if not candidates:
+        return candidates
+
+    is_hist = is_historical_query(query)
+    
+    boosted = []
+    for doc in candidates:
+        doc_copy = dict(doc)
+        cat = str(doc.get("category") or "").lower()
+        is_juris = any(k in cat for k in ["jurisprudence", "decision", "court", "judjuris", "case"])
+        is_statute = any(k in cat for k in ["republic act", "statute", "repacts", "batas", "act"])
+        
+        doc_year = extract_document_year(doc)
+        doc_copy["extracted_year"] = doc_year
+
+        time_boost = 0.0
+        if not is_hist and doc_year:
+            if is_juris:
+                # Supreme Court Decisions Temporal Weighting
+                if doc_year >= 2018:
+                    time_boost = 0.25      # Contemporary controlling precedents (2018-2026)
+                elif doc_year >= 2010:
+                    time_boost = 0.12      # Recent modern precedents (2010-2017)
+                elif doc_year >= 1987:
+                    time_boost = 0.00      # Post-1987 Constitutional baseline (1987-2009)
+                elif doc_year >= 1970:
+                    time_boost = -0.10     # Pre-1987 decisions
+                else:
+                    time_boost = -0.25     # Pre-1970 century-old decisions (1901-1969)
+            elif is_statute:
+                # Modern amending statutes (e.g. RA 11861 over RA 8972)
+                if doc_year >= 2018:
+                    time_boost = 0.10
+                elif doc_year >= 2010:
+                    time_boost = 0.05
+
+        current_score = float(doc.get("score") if doc.get("score") is not None else (doc.get("rerank_score") or 0.0))
+        final_score = round(current_score + time_boost, 4)
+        doc_copy["score"] = final_score
+        doc_copy["temporal_boost"] = time_boost
+        boosted.append(doc_copy)
+
+    # Sort descending by updated temporal score
+    boosted.sort(key=lambda d: d.get("score", 0.0), reverse=True)
+    return boosted
 
 def filter_and_tag_doctrine_currency(docs: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
     is_hist = is_historical_query(query)

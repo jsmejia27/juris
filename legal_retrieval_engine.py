@@ -374,11 +374,39 @@ class LegalRetrievalService:
         for chunk, score in zip(candidates, rerank_scores):
             chunk.rerank_score = float(score)
 
-        # Sort by Cross-Encoder score descending
-        candidates.sort(key=lambda x: x.rerank_score, reverse=True)
+        # -------------------------------------------------------------
+        # STEP 4: Temporal Recency Boost & Modern Precedent Prioritization
+        # -------------------------------------------------------------
+        try:
+            from doctrine_currency import apply_temporal_recency_boost, filter_and_tag_doctrine_currency
+            raw_dicts = [c.dict() for c in candidates]
+            boosted_dicts = apply_temporal_recency_boost(raw_dicts, query)
+            tagged_dicts = filter_and_tag_doctrine_currency(boosted_dicts, query)
+            
+            # Rehydrate back into RetrievedChunk models
+            candidates = [
+                RetrievedChunk(
+                    id=d.get("id") or d.get("doc_id", ""),
+                    doc_id=d.get("doc_id"),
+                    title=d.get("title", ""),
+                    category=d.get("category", ""),
+                    gr_no=d.get("gr_no"),
+                    law_no=d.get("law_no"),
+                    date=d.get("date"),
+                    ponente=d.get("ponente"),
+                    doctrine_status=d.get("doctrine_status", "good_law"),
+                    text=d.get("text", ""),
+                    rrf_score=float(d.get("rrf_score", 0.0) or 0.0),
+                    rerank_score=float(d.get("score", d.get("rerank_score", 0.0)) or 0.0)
+                )
+                for d in tagged_dicts
+            ]
+        except Exception as t_err:
+            logger.debug(f"Temporal boost error in retrieval engine: {t_err}")
+            candidates.sort(key=lambda x: x.rerank_score, reverse=True)
 
         # -------------------------------------------------------------
-        # STEP 4: Pruning & Score Threshold Filtering
+        # STEP 5: Pruning & Score Threshold Filtering
         # -------------------------------------------------------------
         verified_chunks = [
             c for c in candidates if c.rerank_score >= score_threshold
