@@ -513,9 +513,9 @@
                         btn.disabled = false;
                         btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     });
-                    // Re-render any turn where Tab 2 is visible and pending generation
+                    // Re-render any turn where Tab 2 was unrequested so the Execute Digest banner and tab button enable immediately
                     sessionTurns.forEach((t, idx) => {
-                        if (t.activeTab === 2 && t.tab2Status === 'unrequested') {
+                        if ((!t.tab2Status || t.tab2Status === 'unrequested') && !t.tab2Response) {
                             const card = document.getElementById(`assistant-card-${idx}`);
                             if (card) renderStreamingOutput(card, t.thought, t, idx);
                         }
