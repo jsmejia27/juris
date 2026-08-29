@@ -737,10 +737,11 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
         })
 
     # Presidential Decrees (e.g. PD 1987, Presidential Decree No. 442)
+    # Presidential Decrees (e.g. PD 442, Presidential Decree 1987)
     for m in re.finditer(r'\b(?:Presidential\s+Decree(?:\s+No\.?)?|PD|P\.D\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         pd_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"pd {pd_num}", f"presidential decree {pd_num}", f"presidential decree no. {pd_num}"],
             "raw": m.group(0)
         })
@@ -749,7 +750,7 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
     for m in re.finditer(r'\b(?:Proclamation(?:\s+No\.?)?|Proc\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         proc_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"proclamation {proc_num}", f"proc. {proc_num}", f"proclamation no. {proc_num}"],
             "raw": m.group(0)
         })
@@ -758,7 +759,7 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
     for m in re.finditer(r'\b(?:Administrative\s+Order(?:\s+No\.?)?|AO|A\.O\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         ao_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"ao {ao_num}", f"administrative order {ao_num}", f"administrative order no. {ao_num}"],
             "raw": m.group(0)
         })
@@ -767,14 +768,14 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
     for m in re.finditer(r'\b(?:Memorandum\s+Circular(?:\s+No\.?)?|MC|M\.C\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         mc_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"mc {mc_num}", f"memorandum circular {mc_num}", f"memorandum circular no. {mc_num}"],
             "raw": m.group(0)
         })
     for m in re.finditer(r'\b(?:Memorandum\s+Order(?:\s+No\.?)?|MO|M\.O\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         mo_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"mo {mo_num}", f"memorandum order {mo_num}", f"memorandum order no. {mo_num}"],
             "raw": m.group(0)
         })
@@ -783,7 +784,7 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
     for m in re.finditer(r'\b(?:Batas\s+Pambansa(?:\s+Blg\.?)?|BP|B\.P\.?)\s*(\d{1,5})\b', query, re.IGNORECASE):
         bp_num = m.group(1).strip()
         anchors.append({
-            "tier": "tier_ra_with_section",
+            "tier": "tier_bare_ra",
             "terms": [f"bp {bp_num}", f"batas pambansa {bp_num}", f"batas pambansa blg. {bp_num}"],
             "raw": m.group(0)
         })
@@ -851,7 +852,7 @@ def apply_lexical_anchor_boost(
             tier_name = anc["tier"]
             boost_val = boost_cfg.get(tier_name, 0.0)
 
-            if tier_name == "tier_ra_with_section":
+            if tier_name == "tier_ra_with_section" and "ra_num" in anc and "sec_val" in anc:
                 ra_found = f"ra {anc['ra_num']}" in text_corpus or f"republic act {anc['ra_num']}" in text_corpus or anc["ra_num"] in text_corpus
                 sec_found = f"section {anc['sec_val']}" in text_corpus or f"sec. {anc['sec_val']}" in text_corpus or f"article {anc['sec_val']}" in text_corpus or f"section {anc['sec_val']}." in text_corpus or f"section {anc['sec_val']} " in text_corpus
                 if ra_found and sec_found:
@@ -860,7 +861,7 @@ def apply_lexical_anchor_boost(
                         fired_tier = "tier_ra_with_section"
                     matched_anchors.append(anc["raw"])
             else:
-                matched = any(t in text_corpus for t in anc["terms"])
+                matched = any(t in text_corpus for t in anc.get("terms", []))
                 if matched:
                     if boost_val > highest_boost:
                         highest_boost = boost_val
@@ -1029,9 +1030,9 @@ PHILIPPINE_LEGAL_TAXONOMY_MAP = {
     r"\b(?:annulment|nullity\s+of\s+marriage|psychological\s+incapacity|void\s+marriage|separate\s+from\s+spouse|hiwalay\s+sa\s+asawa)\b":
         "Family Code Executive Order 209 Article 36 psychological incapacity Tan-Andal Molina Declaration of Absolute Nullity",
 
-    # Labor Law / Illegal Dismissal / Severance / 13th Month Pay / Overtime
-    r"\b(?:fired\s+without\s+cause|illegal\s+dismissal|constructive\s+dismissal|separation\s+pay|severance|unpaid\s+wages|backwages|tinanggal\s+sa\s+trabaho)\b":
-        "Labor Code Presidential Decree 442 Article 297 Article 298 just cause authorized cause illegal dismissal separation pay backwages NLRC",
+    # Labor Law / Illegal Dismissal / Severance / Absence / Abandonment / Twin-Notice Rule / Sickness
+    r"\b(?:fired|dismissed|terminated|absent\s+(?:from|at)\s+work|absence\s+without\s+leave|awol|sick\s+leave|abandonment\s+of\s+work|tinanggal|tinanggal\s+sa\s+trabaho|sinisante|illegal\s+dismissal|constructive\s+dismissal|separation\s+pay|severance|unpaid\s+wages|backwages|two-notice\s+rule|twin\s+notice)\b":
+        "Labor Code Presidential Decree 442 Article 297 Article 282 just cause illegal dismissal gross and habitual neglect of duty abandonment of work procedural due process twin-notice rule separation pay backwages NLRC reinstatement disease Article 299 Article 284",
 
     r"\b(?:13th\s+month\s+pay|overtime\s+pay|holiday\s+pay|night\s+shift\s+differential|service\s+incentive\s+leave|sahod|leave\s+credits)\b":
         "Presidential Decree 851 13th month pay Labor Code overtime holiday pay service incentive leave mandatory wage",
@@ -1287,7 +1288,7 @@ class LegalRetriever:
 
         return final_selected
 
-DEFAULT_NUM_CTX = 16384  # Expanded 16K context budget for RTX 5070 Ti (16GB VRAM)
+DEFAULT_NUM_CTX = 24576  # Expanded 24K context budget for RTX 5070 Ti (16GB VRAM)
 DEFAULT_TEMPERATURE = 0.0
 
 class LegalRAGPipeline:
@@ -1314,7 +1315,7 @@ class LegalRAGPipeline:
             base_url=self.ollama_url,
             temperature=self.temperature,
             num_ctx=self.num_ctx,
-            num_predict=4096,  # Guarantee complete generation of long-form legal treatise & conclusions
+            num_predict=8192,  # Support up to 8K tokens (~6,500 words / 8-10 printed PDF pages) without truncation
             num_gpu=99  # Full GPU offloading on RTX 5070 Ti
         )
 

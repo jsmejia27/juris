@@ -103,7 +103,7 @@ class ChatRequest(BaseModel):
     history: Optional[List[ChatMessage]] = Field(default=[], max_length=20)
     model: Optional[str] = Field(default="qwen3.5:9b", max_length=64)
     temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
-    num_ctx: Optional[int] = Field(default=16384, ge=1024, le=32768)
+    num_ctx: Optional[int] = Field(default=24576, ge=1024, le=32768)
     category: Optional[str] = Field(default="All", max_length=50)
     top_k: Optional[int] = Field(default=5, ge=1, le=16)
     year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
