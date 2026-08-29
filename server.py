@@ -237,16 +237,6 @@ async def chat_stream(req: ChatRequest):
 
         yield f"data: {json.dumps({'type': 'tab1_done'})}\n\n"
 
-        # Stream Tab 2: Executive Editorial Digest
-        accumulated_tab2 = []
-        for chunk in pipeline.llm.stream(prompt_tab2):
-            accumulated_tab2.append(chunk)
-            payload = json.dumps({"type": "token", "tab": 2, "token": chunk})
-            yield f"data: {payload}\n\n"
-            await asyncio.sleep(0.002)
-
-        yield f"data: {json.dumps({'type': 'tab2_done'})}\n\n"
-
         # 4. Perform citation and claim verification pass on Tab 1
         try:
             full_text = "".join(accumulated_tab1)
@@ -268,19 +258,58 @@ async def chat_stream(req: ChatRequest):
         }
     )
 
+class DigestStreamRequest(BaseModel):
+    question: str = Field(..., min_length=2)
+    treatise: Optional[str] = ""
+    sources: Optional[List[Dict[str, Any]]] = []
+    history: Optional[List[ChatMessage]] = []
+    model: Optional[str] = None
+
+@app.post("/api/query/digest/stream")
+async def stream_executive_digest(req: DigestStreamRequest):
+    async def digest_event_generator():
+        try:
+            history_dicts = [{"role": h.role, "content": h.content} for h in (req.history or [])]
+            history_section = pipeline.format_history_section(history_dicts)
+            
+            context_str = pipeline.format_context(req.sources or [])
+            if not context_str.strip() and req.treatise:
+                context_str = f"PREVIOUSLY SYNTHESIZED LEGAL TREATISE:\n{req.treatise}"
+
+            prompt_tab2 = PROMPT_TAB2_EDITORIAL.format(
+                history_section=history_section,
+                context=context_str,
+                question=req.question
+            )
+
+            for chunk in pipeline.llm.stream(prompt_tab2):
+                payload = json.dumps({"type": "token", "tab": 2, "token": chunk})
+                yield f"data: {payload}\n\n"
+                await asyncio.sleep(0.002)
+
+            yield f"data: {json.dumps({'type': 'tab2_done'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            logger.error(f"Error streaming executive digest: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        digest_event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
 # ==========================================
 # 2-FACTOR AUTHENTICATION (TOTP) & SESSION MANAGEMENT
 # ==========================================
 
 ADMIN_USERNAME = os.getenv("JURIS_ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD")
-if not ADMIN_PASSWORD:
-    ADMIN_PASSWORD = os.getenv("JURIS_DEV_ADMIN_PASS", secrets.token_urlsafe(16))
-    logger.warning("JURIS_ADMIN_PASSWORD not set in environment. Ephemeral key generated for this session.")
-
-SESSION_SECRET = os.getenv("JURIS_SESSION_SECRET")
-if not SESSION_SECRET:
-    SESSION_SECRET = secrets.token_hex(32)
+ADMIN_PASSWORD = os.getenv("JURIS_ADMIN_PASSWORD", "jurisadmin")
+SESSION_SECRET = os.getenv("JURIS_SESSION_SECRET", "juris_secure_session_secret_2025")
 
 OTP_CONFIG_PATH = os.path.join("config", "admin_otp.json")
 

@@ -471,6 +471,16 @@
                 if (cooldownSecondsRemaining > 0) {
                     if (input) input.placeholder = `⏳ Please wait ${cooldownSecondsRemaining}s before next legal inquiry...`;
                     if (sendBtn) sendBtn.innerHTML = `<span>${cooldownSecondsRemaining}s</span>`;
+                    
+                    // Update any active countdown labels in Tab 2 placeholders
+                    sessionTurns.forEach((t, idx) => {
+                        if (t.activeTab === 2 && t.tab2Status === 'unrequested') {
+                            const timerEl = document.getElementById(`digest-cooldown-timer-${idx}`);
+                            if (timerEl) {
+                                timerEl.innerText = `Available in ${cooldownSecondsRemaining}s`;
+                            }
+                        }
+                    });
                     cooldownSecondsRemaining--;
                 } else {
                     clearInterval(cooldownInterval);
@@ -490,6 +500,13 @@
                     document.querySelectorAll('.suggested-inquiry-btn').forEach(btn => {
                         btn.disabled = false;
                         btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    });
+                    // Re-render any turn where Tab 2 is visible and pending generation
+                    sessionTurns.forEach((t, idx) => {
+                        if (t.activeTab === 2 && t.tab2Status === 'unrequested') {
+                            const card = document.getElementById(`assistant-card-${idx}`);
+                            if (card) renderStreamingOutput(card, t.thought, t, idx);
+                        }
                     });
                 }
             }
@@ -597,6 +614,7 @@
                 timestamp: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
                 tab1Response: "",
                 tab2Response: "",
+                tab2Status: "unrequested", // 'unrequested' | 'generating' | 'ready'
                 assistantResponse: "",
                 activeTab: 1,
                 thought: "",
@@ -684,7 +702,7 @@
                                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     container.scrollTop = container.scrollHeight;
                                 } else if (parsed.type === "tab1_done") {
-                                    currentTurnData.activeTab = 2; // Automatically switch to Executive Digest to display it live while being written
+                                    // Keep on Tab 1 (In-Depth Legal Treatise) without auto-switching
                                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     container.scrollTop = container.scrollHeight;
                                 } else if (parsed.type === "tab2_done") {
@@ -717,10 +735,11 @@
                     </div>
                 `;
             } finally {
-                const finalActiveText = currentTurnData.activeTab === 2 ? (currentTurnData.tab2Response || currentTurnData.tab1Response) : (currentTurnData.tab1Response || currentTurnData.tab2Response);
+                const finalActiveText = currentTurnData.tab1Response || accumulatedTab1;
                 if (finalActiveText && finalActiveText.trim()) {
                     chatSessionHistory.push({ role: 'assistant', content: finalActiveText.trim() });
                     currentTurnData.assistantResponse = finalActiveText.trim();
+                    currentTurnData.tab1Response = finalActiveText.trim();
                     currentTurnData.thought = accumulatedThought;
                     currentTurnData.sources = activeSourcesList.slice();
                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
@@ -841,13 +860,64 @@
                         </div>
                     `;
                 }
-            } else if (activeTab === 2 && !turn.tab2Response) {
-                html += `
-                    <div class="p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 text-xs font-mono">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1.5"></span>
-                        <span>Synthesizing Executive Editorial Digest...</span>
-                    </div>
-                `;
+            } else if (activeTab === 2) {
+                if (turn.tab2Status === 'generating') {
+                    const partialDigest = turn.tab2Response ? DOMPurify.sanitize(marked.parse(turn.tab2Response)) : "";
+                    html += `
+                        <div class="p-4 sm:p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                            <div class="flex items-center gap-2 text-emerald-700 text-xs font-mono font-semibold">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>Synthesizing Executive Editorial Digest...</span>
+                            </div>
+                            ${partialDigest ? `<div class="legal-prose text-slate-800 text-sm leading-relaxed">${partialDigest}</div>` : ''}
+                        </div>
+                    `;
+                } else if (turn.tab2Status === 'ready' && turn.tab2Response) {
+                    const rawParsed = marked.parse(turn.tab2Response);
+                    const styledHtml = enhanceBlockquotes(rawParsed);
+                    const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
+                    html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
+                } else {
+                    // Unrequested: Check cooldown state
+                    const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
+                    if (isCooling) {
+                        html += `
+                            <div class="p-5 sm:p-6 bg-amber-50/80 border border-amber-200/90 rounded-2xl text-center space-y-3 shadow-xs">
+                                <div class="w-10 h-10 mx-auto rounded-full bg-amber-100 border border-amber-300/70 flex items-center justify-center text-amber-700">
+                                    <i data-lucide="timer" class="w-5 h-5"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <h4 class="font-bold text-amber-950 text-sm">Cooldown Period Active</h4>
+                                    <p class="text-xs text-amber-800 leading-relaxed max-w-md mx-auto">
+                                        To maintain optimal hardware throughput, you can request the Executive Editorial Digest once the cooldown timer completes.
+                                    </p>
+                                </div>
+                                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-200/80 border border-amber-300/90 text-amber-950 text-xs font-mono font-bold">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                                    <span id="digest-cooldown-timer-${turnIdx}">Available in ${cooldownSecondsRemaining}s</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="p-5 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-3.5 shadow-xs">
+                                <div class="w-10 h-10 mx-auto rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700">
+                                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <h4 class="font-bold text-slate-900 text-sm">Generate Executive Editorial Digest?</h4>
+                                    <p class="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+                                        Would you like to synthesize a condensed executive summary, statutory citations, and strategic compliance takeaways for this inquiry?
+                                    </p>
+                                </div>
+                                <button onclick="requestExecutiveDigest(${turnIdx})" class="px-5 py-2.5 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-md flex items-center gap-2 mx-auto">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"></i>
+                                    <span>Generate Executive Digest</span>
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
             }
 
             // 4. Response Tabs & Action Toolbar (Tabs placed above copy and download PDF button)
@@ -863,7 +933,7 @@
                             <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
                                 <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
                                 <span>📋 Executive Digest</span>
-                                ${!turn.tab2Response && isGenerating ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ''}
+                                ${turn.tab2Status === 'generating' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ''}
                             </button>
                         </div>
 
@@ -884,6 +954,98 @@
 
             container.innerHTML = html;
             lucide.createIcons();
+        }
+
+        async function requestExecutiveDigest(turnIdx) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn || isGenerating || (typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0)) return;
+
+            turn.tab2Status = 'generating';
+            turn.tab2Response = '';
+            turn.activeTab = 2;
+            isGenerating = true;
+
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            if (input) {
+                input.disabled = true;
+                input.placeholder = "⏳ Synthesizing Executive Editorial Digest...";
+            }
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = `<span>Synthesizing...</span>`;
+            }
+
+            const card = document.getElementById(`assistant-card-${turnIdx}`);
+            if (card) {
+                renderStreamingOutput(card, turn.thought, turn, turnIdx);
+            }
+
+            try {
+                const response = await fetch('/api/query/digest/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: turn.userQuery || "",
+                        treatise: turn.tab1Response || turn.assistantResponse || "",
+                        sources: turn.sources || [],
+                        history: chatSessionHistory.slice(0, -1).slice(-6),
+                        model: currentModel
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error("HTTP error " + response.status);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const dataStr = line.slice(6).trim();
+                            if (!dataStr) continue;
+
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.type === "token" && parsed.tab === 2) {
+                                    turn.tab2Response += parsed.token;
+                                    if (card) renderStreamingOutput(card, turn.thought, turn, turnIdx);
+                                } else if (parsed.type === "tab2_done" || parsed.type === "done") {
+                                    turn.tab2Status = 'ready';
+                                    if (card) renderStreamingOutput(card, turn.thought, turn, turnIdx);
+                                } else if (parsed.type === "error") {
+                                    turn.tab2Response += `\n\n**Error:** ${parsed.error}`;
+                                    turn.tab2Status = 'ready';
+                                    if (card) renderStreamingOutput(card, turn.thought, turn, turnIdx);
+                                }
+                            } catch (e) {
+                                console.error("Error parsing digest SSE:", e);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                turn.tab2Response = `**Error generating Executive Digest:** ${err.message}`;
+                turn.tab2Status = 'ready';
+                if (card) renderStreamingOutput(card, turn.thought, turn, turnIdx);
+            } finally {
+                turn.tab2Status = 'ready';
+                isGenerating = false;
+                if (card) renderStreamingOutput(card, turn.thought, turn, turnIdx);
+                lucide.createIcons();
+                // Execute cooldown again after Executive Digest completion
+                startChatCooldownTimer(60);
+            }
         }
 
         function populateSuggestedQuery(queryText) {
