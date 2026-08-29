@@ -1253,6 +1253,7 @@ class LegalRAGPipeline:
             base_url=self.ollama_url,
             temperature=self.temperature,
             num_ctx=self.num_ctx,
+            num_predict=4096,  # Guarantee complete generation of long-form legal treatise & conclusions
             num_gpu=99  # Full GPU offloading on RTX 5070 Ti
         )
 
@@ -1327,7 +1328,7 @@ class LegalRAGPipeline:
 
         return query
 
-    def format_context(self, docs: List[Dict[str, Any]], bills_context: str = "", max_chars: int = 40000) -> str:
+    def format_context(self, docs: List[Dict[str, Any]], bills_context: str = "", max_chars: int = 18000) -> str:
         if not docs and not bills_context:
             return "No relevant legal documents found."
         
