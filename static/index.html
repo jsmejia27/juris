@@ -722,10 +722,12 @@
                                     container.scrollTop = container.scrollHeight;
                                 } else if (parsed.type === "verification") {
                                     const vSummary = parsed.summary;
-                                    if (vSummary && vSummary.annotated_prose && (!parsed.tab || parsed.tab === 1)) {
+                                    if (vSummary && vSummary.annotated_prose && vSummary.annotated_prose.trim() && vSummary.annotated_prose.trim() !== "No output generated." && (!parsed.tab || parsed.tab === 1)) {
                                         accumulatedTab1 = vSummary.annotated_prose;
                                         currentTurnData.tab1Response = accumulatedTab1;
-                                        currentTurnData.assistantResponse = currentTurnData.activeTab === 2 ? currentTurnData.tab2Response : currentTurnData.tab1Response;
+                                        if (currentTurnData.activeTab === 1) {
+                                            currentTurnData.assistantResponse = currentTurnData.tab1Response;
+                                        }
                                         renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                                     }
                                 } else if (parsed.type === "error") {

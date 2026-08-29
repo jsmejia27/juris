@@ -44,32 +44,21 @@ def normalize_text_for_matching(text: str) -> str:
 
 def parse_and_validate_structured_output(raw_output: str) -> StructuredLegalResponse:
     if not raw_output or not raw_output.strip():
-        return StructuredLegalResponse(claims=[], answer_prose="No output generated.")
+        return StructuredLegalResponse(claims=[], answer_prose="")
 
     clean_text = raw_output.strip()
 
-    # 1. Try to extract JSON from markdown code block
+    # 1. Try to extract JSON from markdown code block if explicitly formatted as JSON
     json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', clean_text)
     if json_match:
-        json_candidate = json_match.group(1).strip()
-    else:
-        brace_start = clean_text.find('{')
-        brace_end = clean_text.rfind('}')
-        if brace_start != -1 and brace_end != -1 and brace_end > brace_start:
-            json_candidate = clean_text[brace_start:brace_end+1].strip()
-        else:
-            json_candidate = ""
-
-    if json_candidate:
         try:
-            parsed = json.loads(json_candidate)
-            if isinstance(parsed, dict) and "answer_prose" in parsed:
+            parsed = json.loads(json_match.group(1).strip())
+            if isinstance(parsed, dict) and parsed.get("answer_prose"):
                 return StructuredLegalResponse(**parsed)
         except Exception as err:
-            logger.debug(f"JSON parsing failed on candidate: {err}")
+            logger.debug(f"JSON parsing failed on codeblock candidate: {err}")
 
-    # 2. Fallback heuristic
-    logger.warning("Structured JSON parsing failed. Falling back to heuristic prose extraction.")
+    # 2. Fallback heuristic: use clean_text directly as answer_prose and extract bracketed citations
     claims = []
     cite_matches = re.finditer(r'\[([A-Za-z0-9\s\.\,\-\–]+)\]', clean_text)
     for m in cite_matches:

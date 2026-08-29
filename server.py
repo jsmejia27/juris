@@ -238,13 +238,16 @@ async def chat_stream(req: ChatRequest):
         yield f"data: {json.dumps({'type': 'tab1_done'})}\n\n"
 
         # 4. Perform citation and claim verification pass on Tab 1
-        try:
-            full_text = "".join(accumulated_tab1)
-            structured_resp = parse_and_validate_structured_output(full_text)
-            v_summary = verify_citations_and_claims(structured_resp, sources, query=req.message)
-            yield f"data: {json.dumps({'type': 'verification', 'tab': 1, 'summary': v_summary.dict()})}\n\n"
-        except Exception as v_err:
-            logger.debug(f"Verification pass error: {v_err}")
+        if accumulated_tab1:
+            try:
+                full_text = "".join(accumulated_tab1).strip()
+                if full_text:
+                    structured_resp = parse_and_validate_structured_output(full_text)
+                    if structured_resp.answer_prose:
+                        v_summary = verify_citations_and_claims(structured_resp, sources, query=req.message)
+                        yield f"data: {json.dumps({'type': 'verification', 'tab': 1, 'summary': v_summary.dict()})}\n\n"
+            except Exception as v_err:
+                logger.debug(f"Verification pass error: {v_err}")
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
