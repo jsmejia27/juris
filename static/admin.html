@@ -271,6 +271,9 @@
                     </span>
                 </div>
 
+                <!-- Duplicate Detection Alert Banner -->
+                <div id="duplicateWarningBanner" class="hidden p-4 rounded-xl text-xs font-mono transition-all"></div>
+
                 <!-- Editable Metadata Form Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
                     <div class="sm:col-span-2">
@@ -317,14 +320,16 @@
                 </div>
 
                 <!-- Action Controls -->
-                <div class="flex items-center justify-between pt-3 border-t border-slate-800">
-                    <button onclick="discardPreview()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                    <button onclick="discardPreview()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
                         Discard Preview
                     </button>
-                    <button onclick="commitDocumentToQdrant()" id="commitDocumentBtn" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-950/40">
-                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                        <span>Confirm &amp; Index into Knowledge Base</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="commitDocumentToQdrant()" id="commitDocumentBtn" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-950/40">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            <span id="commitBtnLabel">Confirm &amp; Index into Knowledge Base</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -346,15 +351,73 @@
                                 <th class="p-3 hidden md:table-cell">Year</th>
                                 <th class="p-3">Chunks</th>
                                 <th class="p-3">Ingested At</th>
+                                <th class="p-3 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody id="ingestHistoryTableBody" class="divide-y divide-slate-800/60 text-slate-300">
                             <tr>
-                                <td colspan="5" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td>
+                                <td colspan="6" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- NEW: Corpus Duplicate & Document Conflict Inspector -->
+        <div class="admin-card p-6 border-amber-500/20">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                        <i data-lucide="copy-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Corpus Duplicate &amp; Conflict Inspector</h2>
+                        <p class="text-xs text-slate-400">Verify whether a Republic Act, G.R. ruling, or URL already exists in Qdrant before ingesting, or scan for duplicates.</p>
+                    </div>
+                </div>
+                <button onclick="scanAllDuplicates()" id="scanDuplicatesBtn" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-xs">
+                    <i data-lucide="scan-search" class="w-4 h-4 text-amber-400"></i>
+                    <span>Scan Corpus for Duplicates</span>
+                </button>
+            </div>
+
+            <!-- Tool 1: Real-Time Document Lookup -->
+            <div class="space-y-3">
+                <label class="block text-xs font-semibold text-slate-300">Search Document Existence in Knowledge Base</label>
+                <div class="flex flex-col sm:flex-row items-stretch gap-2">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input 
+                            type="text" 
+                            id="dupCheckQuery" 
+                            placeholder="Enter RA number (e.g. RA 12254, 8972), G.R. number, Title keyword, or LawPhil URL..." 
+                            class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-200 placeholder:text-slate-600 outline-none transition"
+                            onkeydown="if(event.key==='Enter') checkDuplicateManual()"
+                        />
+                    </div>
+                    <button onclick="checkDuplicateManual()" id="dupCheckBtn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition shrink-0">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        <span>Check Document</span>
+                    </button>
+                </div>
+
+                <!-- Lookup Result Container -->
+                <div id="dupCheckResult" class="hidden mt-3 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-mono space-y-2"></div>
+            </div>
+
+            <!-- Tool 2: Corpus Duplicate Scan Result (Hidden by default) -->
+            <div id="duplicateScanResultsContainer" class="hidden mt-6 pt-5 border-t border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Duplicate Scan Results</span>
+                    </h3>
+                    <span id="scanClusterCountBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-950/80 border border-amber-800 text-amber-400">
+                        0 Duplicate Groups
+                    </span>
+                </div>
+                <div id="duplicateClustersList" class="space-y-3 max-h-72 overflow-y-auto custom-scroll"></div>
             </div>
         </div>
 
@@ -931,6 +994,7 @@
         function renderPreview(data) {
             const card = document.getElementById('ingestPreviewCard');
             const meta = data.metadata || {};
+            const dup = data.duplicate_check || {};
 
             document.getElementById('previewTitle').value = meta.title || "";
             document.getElementById('previewCategory').value = meta.category || "Republic Act";
@@ -942,6 +1006,44 @@
 
             document.getElementById('previewStatsBadge').innerText = `${data.chunk_count} chunks \u2022 ${data.word_count.toLocaleString()} words`;
             document.getElementById('previewChunkCountLabel').innerText = `Showing first ${Math.min(3, data.sample_chunks.length)} of ${data.chunk_count} total chunks`;
+
+            // Duplicate Detection Banner Logic
+            const dupBanner = document.getElementById('duplicateWarningBanner');
+            const commitBtn = document.getElementById('commitDocumentBtn');
+            const commitLabel = document.getElementById('commitBtnLabel');
+
+            if (dup && dup.is_duplicate) {
+                const recs = dup.existing_records || [];
+                const firstRec = recs[0] || {};
+                dupBanner.className = "p-4 rounded-xl text-xs font-mono bg-amber-950/80 border border-amber-500/70 text-amber-200 space-y-2 animate-in fade-in";
+                dupBanner.innerHTML = `
+                    <div class="flex items-center gap-2 font-bold text-amber-300">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                        <span>Duplicate Warning: Document Already Exists in Knowledge Base</span>
+                    </div>
+                    <div class="text-[11px] text-amber-200/90 leading-relaxed">
+                        Matched by <strong>${escapeHtml(dup.matched_by || 'doc_number')}</strong> &bull; 
+                        Found <strong>${dup.match_count} existing record(s)</strong>.
+                        ${firstRec.title ? `<div class="mt-1 text-white truncate font-sans"><strong>Title:</strong> ${escapeHtml(firstRec.title)}</div>` : ''}
+                        <div class="mt-0.5 text-amber-300/80">Previously Indexed: ${escapeHtml(firstRec.ingested_at || 'Corpus')} (${firstRec.chunks_count || 'multiple'} chunks).</div>
+                    </div>
+                    <div class="text-[11px] text-amber-400 font-semibold pt-1 border-t border-amber-500/30">
+                        Submitting will overwrite and purge old vector chunks to prevent duplication.
+                    </div>
+                `;
+                dupBanner.classList.remove('hidden');
+                commitBtn.className = "w-full sm:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-amber-950/40";
+                if (commitLabel) commitLabel.innerText = "Overwrite & Re-Index into Knowledge Base";
+            } else {
+                dupBanner.className = "p-3.5 rounded-xl text-xs font-mono bg-emerald-950/60 border border-emerald-500/60 text-emerald-300 flex items-center gap-2.5 animate-in fade-in";
+                dupBanner.innerHTML = `
+                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                    <span>Verified Unique: No conflicting RA number, G.R. number, or URL found in the knowledge base.</span>
+                `;
+                dupBanner.classList.remove('hidden');
+                commitBtn.className = "w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-950/40";
+                if (commitLabel) commitLabel.innerText = "Confirm & Index into Knowledge Base";
+            }
 
             const chunksList = document.getElementById('previewChunksList');
             chunksList.innerHTML = data.sample_chunks.map((chk, i) => `
@@ -975,10 +1077,16 @@
             const docType = document.getElementById('previewDocType').value.trim();
             const ponente = document.getElementById('previewPonente').value.trim();
             const sourceUrl = currentPreviewData.metadata.source_url || "manual_ingestion";
+            const isDup = currentPreviewData.duplicate_check && currentPreviewData.duplicate_check.is_duplicate;
 
             if (!title) {
                 alert("Document Title is required.");
                 return;
+            }
+
+            if (isDup) {
+                const proceed = confirm(`⚠️ Warning: "${docNumber || title}" is already in the knowledge base.\n\nProceed to OVERWRITE existing chunks and re-index?`);
+                if (!proceed) return;
             }
 
             const btn = document.getElementById('commitDocumentBtn');
@@ -999,12 +1107,13 @@
                         doc_type: docType,
                         ponente,
                         source_url: sourceUrl,
-                        full_text: currentPreviewData.full_cleaned_text
+                        full_text: currentPreviewData.full_cleaned_text,
+                        overwrite: isDup ? true : false
                     })
                 });
                 const result = await res.json();
                 if (res.ok && result.status === 'success') {
-                    alert(`\u2705 Ingestion Successful!\n\nDocument: "${title}"\nIndexed ${result.chunks_indexed} vector chunks into Qdrant.`);
+                    alert(`\u2705 Ingestion Successful!\n\nDocument: "${title}"\nIndexed ${result.chunks_indexed} vector chunks into Qdrant.${result.overwritten ? ' (Existing version overwritten)' : ''}`);
                     discardPreview();
                     document.getElementById('ingestUrlInput').value = '';
                     document.getElementById('rawContentInput').value = '';
@@ -1017,8 +1126,176 @@
                 alert("Error indexing document: " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i><span>Confirm &amp; Index into Knowledge Base</span>`;
+                btn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i><span id="commitBtnLabel">Confirm &amp; Index into Knowledge Base</span>`;
                 lucide.createIcons();
+            }
+        }
+
+        async function checkDuplicateManual() {
+            const query = document.getElementById('dupCheckQuery').value.trim();
+            if (!query) {
+                alert("Please enter an RA number, G.R. number, title keyword, or URL to check.");
+                return;
+            }
+
+            const btn = document.getElementById('dupCheckBtn');
+            const resContainer = document.getElementById('dupCheckResult');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Checking...</span>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/check-duplicate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_number: query,
+                        title: query,
+                        source_url: query
+                    })
+                });
+                const data = await res.json();
+                resContainer.classList.remove('hidden');
+
+                if (data.is_duplicate && data.existing_records && data.existing_records.length > 0) {
+                    resContainer.className = "mt-3 p-4 rounded-xl bg-amber-950/80 border border-amber-500/70 text-xs font-mono space-y-3";
+                    resContainer.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 font-bold text-amber-300">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+                                <span>Record Found: ${data.existing_records.length} matching document(s) in Knowledge Base</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-amber-900/90 text-amber-300 text-[10px]">ALREADY INDEXED</span>
+                        </div>
+                        <div class="space-y-2 divide-y divide-amber-500/20 pt-1">
+                            ${data.existing_records.map(rec => `
+                                <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                    <div>
+                                        <div class="font-bold text-white font-sans text-sm">${escapeHtml(rec.title)}</div>
+                                        <div class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
+                                            <span><strong>Doc:</strong> ${escapeHtml(rec.doc_number || 'N/A')}</span>
+                                            <span>&bull;</span>
+                                            <span><strong>Category:</strong> ${escapeHtml(rec.category || 'N/A')}</span>
+                                            <span>&bull;</span>
+                                            <span class="text-emerald-400 font-bold">${rec.chunks_count || 'N/A'} chunks</span>
+                                        </div>
+                                        ${rec.source_url ? `<div class="text-[10px] text-slate-400 truncate max-w-md mt-0.5">${escapeHtml(rec.source_url)}</div>` : ''}
+                                    </div>
+                                    <button onclick="deleteDocumentFromCorpus('${rec.doc_id || ''}', '${rec.doc_number || ''}', '${rec.source_url || ''}', '${escapeHtml(rec.title || '')}')" class="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-300 text-[11px] rounded-lg transition flex items-center gap-1 shrink-0">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+                                        <span>Purge Record</span>
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    resContainer.className = "mt-3 p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/60 text-xs font-mono space-y-1";
+                    resContainer.innerHTML = `
+                        <div class="flex items-center gap-2 font-bold text-emerald-300">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                            <span>No Duplicate Found: "${escapeHtml(query)}" does not exist in the knowledge base.</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">This document is safe to ingest without creating duplicate vector chunks.</p>
+                    `;
+                }
+            } catch (err) {
+                resContainer.classList.remove('hidden');
+                resContainer.className = "mt-3 p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-xs font-mono text-rose-300";
+                resContainer.innerHTML = `<strong>Error checking document:</strong> ${escapeHtml(err.message)}`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="search" class="w-4 h-4"></i><span>Check Document</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function scanAllDuplicates() {
+            const btn = document.getElementById('scanDuplicatesBtn');
+            const container = document.getElementById('duplicateScanResultsContainer');
+            const list = document.getElementById('duplicateClustersList');
+            const badge = document.getElementById('scanClusterCountBadge');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Scanning Corpus...</span>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/duplicates');
+                const data = await res.json();
+                container.classList.remove('hidden');
+
+                const clusters = data.clusters || [];
+                badge.innerText = `${clusters.length} Duplicate Group(s)`;
+
+                if (clusters.length === 0) {
+                    list.innerHTML = `
+                        <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-xl text-center text-slate-400 text-xs">
+                            \u2705 No duplicate document clusters found across manual ingestion records.
+                        </div>
+                    `;
+                } else {
+                    list.innerHTML = clusters.map(c => `
+                        <div class="p-4 bg-slate-900/90 border border-amber-500/40 rounded-xl space-y-2 text-xs font-mono">
+                            <div class="flex items-center justify-between text-amber-300 font-bold">
+                                <span>${escapeHtml(c.cluster_key)}</span>
+                                <span class="px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-[10px]">${c.duplicate_count} Instances</span>
+                            </div>
+                            <div class="space-y-1.5 divide-y divide-slate-800">
+                                ${(c.documents || []).map(doc => `
+                                    <div class="pt-1.5 flex items-center justify-between text-[11px]">
+                                        <div class="truncate max-w-lg">
+                                            <span class="text-white">${escapeHtml(doc.title || 'Untitled')}</span>
+                                            <span class="text-slate-500 ml-1">(${escapeHtml(doc.ingested_at || '')})</span>
+                                        </div>
+                                        <button onclick="deleteDocumentFromCorpus('${doc.doc_id || ''}', '${doc.doc_number || ''}', '${doc.source_url || ''}', '${escapeHtml(doc.title || '')}')" class="text-rose-400 hover:text-rose-300 text-[10px] underline ml-2 shrink-0">
+                                            Purge
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                alert("Error scanning duplicates: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="scan-search" class="w-4 h-4 text-amber-400"></i><span>Scan Corpus for Duplicates</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function deleteDocumentFromCorpus(docId, docNumber, sourceUrl, title) {
+            const label = title || docNumber || sourceUrl || "this document";
+            const ok = confirm(`Are you sure you want to permanently purge "${label}" and all its vector chunks from Qdrant?`);
+            if (!ok) return;
+
+            try {
+                const res = await fetch('/api/manage/ingest/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_id: docId || null,
+                        doc_number: docNumber || null,
+                        source_url: sourceUrl || null
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`\u2705 Document successfully purged from knowledge base.`);
+                    fetchStats();
+                    loadIngestionHistory();
+                    // Re-run search or scan if active
+                    const qInput = document.getElementById('dupCheckQuery').value.trim();
+                    if (qInput) checkDuplicateManual();
+                    const scanContainer = document.getElementById('duplicateScanResultsContainer');
+                    if (!scanContainer.classList.contains('hidden')) scanAllDuplicates();
+                } else {
+                    alert(data.error || "Failed to delete document.");
+                }
+            } catch (err) {
+                alert("Error deleting document: " + err.message);
             }
         }
 
@@ -1031,7 +1308,7 @@
                 if (!tbody) return;
 
                 if (!data.history || data.history.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td></tr>`;
                     return;
                 }
 
@@ -1049,8 +1326,14 @@
                         <td class="p-3 hidden md:table-cell text-slate-400">${escapeHtml(item.year || '')}</td>
                         <td class="p-3 text-emerald-400 font-bold">${item.chunks_count} chunks</td>
                         <td class="p-3 text-slate-400 text-[11px]">${escapeHtml(item.ingested_at || '')}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteDocumentFromCorpus('${item.doc_id || ''}', '${item.doc_number || ''}', '${item.source_url || ''}', '${escapeHtml(item.title || '')}')" class="px-2.5 py-1 bg-rose-950/70 hover:bg-rose-900 border border-rose-800/50 text-rose-300 text-[10px] rounded-lg transition" title="Purge from Qdrant">
+                                Purge
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
+                lucide.createIcons();
             } catch (err) {
                 console.error("Error loading ingestion history:", err);
             }

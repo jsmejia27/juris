@@ -223,19 +223,249 @@ class LegalIngestionService:
         chunks = [c.strip() for c in raw_chunks if len(c.strip()) >= 50]
         return chunks
 
+    def check_existing_document(self, doc_number: str = "", title: str = "", source_url: str = "") -> Dict[str, Any]:
+        """
+        Checks if a Republic Act, Jurisprudence ruling, or issuance is already indexed in Qdrant or logs.
+        """
+        existing_records = []
+        matched_by = None
+        
+        # 1. Search in manual ingestion logs
+        if os.path.exists(INGESTION_LOG_FILE):
+            try:
+                with open(INGESTION_LOG_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        entry = json.loads(line)
+                        e_doc_num = (entry.get("doc_number") or "").strip().lower()
+                        e_url = (entry.get("source_url") or "").strip().lower()
+                        e_title = (entry.get("title") or "").strip().lower()
+
+                        q_doc_num = doc_number.strip().lower() if doc_number else ""
+                        q_url = source_url.strip().lower() if source_url and source_url != "manual_ingestion" else ""
+                        q_title = title.strip().lower() if title else ""
+
+                        is_match = False
+                        if q_doc_num and (q_doc_num == e_doc_num or (len(q_doc_num) >= 3 and q_doc_num in e_doc_num)):
+                            is_match = True
+                            matched_by = "doc_number"
+                        elif q_url and q_url == e_url:
+                            is_match = True
+                            matched_by = "source_url"
+                        elif q_title and len(q_title) > 10 and (q_title == e_title or q_title in e_title):
+                            is_match = True
+                            matched_by = "title"
+
+                        if is_match:
+                            existing_records.append({
+                                "doc_id": entry.get("doc_id"),
+                                "title": entry.get("title"),
+                                "category": entry.get("category"),
+                                "doc_number": entry.get("doc_number"),
+                                "year": entry.get("year"),
+                                "source_url": entry.get("source_url"),
+                                "chunks_count": entry.get("chunks_count", 0),
+                                "ingested_at": entry.get("ingested_at", "Previous Session"),
+                                "source": "ingestion_log"
+                            })
+            except Exception as err:
+                logger.warning(f"Error checking duplicate in ingestion log: {err}")
+
+        # 2. Query Qdrant points directly if no log match or to get exact chunk count
+        try:
+            filter_conditions = []
+            if source_url and source_url != "manual_ingestion":
+                filter_conditions.append(models.FieldCondition(key="source_url", match=models.MatchValue(value=source_url)))
+            if doc_number:
+                filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=doc_number)))
+                filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=doc_number)))
+                # Extract digits if e.g. "RA 12254"
+                ra_digits = re.search(r'\b(?:ra|republic\s+act(?:\s+no\.)?)\s*(\d+)\b', doc_number, re.IGNORECASE)
+                if ra_digits:
+                    d_num = ra_digits.group(1)
+                    filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=f"RA {d_num}")))
+                    filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=f"RA {d_num}")))
+            if title and len(title) > 10:
+                filter_conditions.append(models.FieldCondition(key="title", match=models.MatchValue(value=title)))
+
+            if filter_conditions:
+                scroll_filter = models.Filter(should=filter_conditions)
+                res, _ = self.client.scroll(
+                    collection_name=COLLECTION_NAME,
+                    scroll_filter=scroll_filter,
+                    limit=30,
+                    with_payload=True,
+                    with_vectors=False
+                )
+                if res:
+                    # Group by title or doc_id
+                    found_doc_ids = set()
+                    for pt in res:
+                        p_load = pt.payload or {}
+                        p_doc_id = p_load.get("doc_id") or p_load.get("title")
+                        if p_doc_id and p_doc_id not in found_doc_ids:
+                            found_doc_ids.add(p_doc_id)
+                            # Check if already in existing_records
+                            if not any(r.get("doc_id") == p_doc_id or r.get("title") == p_load.get("title") for r in existing_records):
+                                existing_records.append({
+                                    "doc_id": p_load.get("doc_id"),
+                                    "title": p_load.get("title"),
+                                    "category": p_load.get("category"),
+                                    "doc_number": p_load.get("doc_number") or p_load.get("gr_no"),
+                                    "year": p_load.get("year"),
+                                    "source_url": p_load.get("source_url"),
+                                    "chunks_count": p_load.get("total_chunks", len(res)),
+                                    "ingested_at": p_load.get("ingested_at", "Indexed in Corpus"),
+                                    "source": "qdrant_index"
+                                })
+                                if not matched_by:
+                                    matched_by = "doc_number" if doc_number else ("source_url" if source_url else "title")
+        except Exception as q_err:
+            logger.debug(f"Direct Qdrant duplicate check notice: {q_err}")
+
+        is_duplicate = len(existing_records) > 0
+        return {
+            "is_duplicate": is_duplicate,
+            "exists": is_duplicate,
+            "matched_by": matched_by,
+            "match_count": len(existing_records),
+            "existing_records": existing_records
+        }
+
+    def delete_document_from_qdrant(self, doc_id: str = "", doc_number: str = "", source_url: str = "") -> Dict[str, Any]:
+        """
+        Purges all vector chunks for a specific document from Qdrant and cleans up ingestion logs.
+        """
+        filter_conditions = []
+        if doc_id:
+            filter_conditions.append(models.FieldCondition(key="doc_id", match=models.MatchValue(value=doc_id)))
+        if doc_number:
+            filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=doc_number)))
+            filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=doc_number)))
+            ra_digits = re.search(r'\b(?:ra|republic\s+act(?:\s+no\.)?)\s*(\d+)\b', doc_number, re.IGNORECASE)
+            if ra_digits:
+                d_num = ra_digits.group(1)
+                filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=f"RA {d_num}")))
+                filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=f"RA {d_num}")))
+        if source_url and source_url != "manual_ingestion":
+            filter_conditions.append(models.FieldCondition(key="source_url", match=models.MatchValue(value=source_url)))
+
+        if not filter_conditions:
+            raise ValueError("At least one search parameter (doc_id, doc_number, or source_url) must be provided for deletion.")
+
+        del_filter = models.Filter(should=filter_conditions)
+        
+        logger.info(f"Deleting matching vector points from Qdrant collection '{COLLECTION_NAME}'...")
+        self.client.delete(
+            collection_name=COLLECTION_NAME,
+            points_selector=models.FilterSelector(filter=del_filter),
+            wait=True
+        )
+
+        # Clean from INGESTION_LOG_FILE
+        if os.path.exists(INGESTION_LOG_FILE):
+            try:
+                remaining_lines = []
+                with open(INGESTION_LOG_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
+                        e = json.loads(line)
+                        match = False
+                        if doc_id and e.get("doc_id") == doc_id:
+                            match = True
+                        if doc_number and e.get("doc_number") == doc_number:
+                            match = True
+                        if source_url and e.get("source_url") == source_url:
+                            match = True
+                        if not match:
+                            remaining_lines.append(line)
+
+                with open(INGESTION_LOG_FILE, "w", encoding="utf-8") as f:
+                    f.writelines(remaining_lines)
+            except Exception as log_err:
+                logger.warning(f"Error updating ingestion log during deletion: {log_err}")
+
+        return {
+            "status": "success",
+            "message": f"Successfully purged document from knowledge base (doc_number='{doc_number}', doc_id='{doc_id}')"
+        }
+
+    def scan_all_duplicates(self) -> List[Dict[str, Any]]:
+        """
+        Scans the manual ingestion logs and Qdrant points to identify duplicate document clusters.
+        """
+        duplicate_clusters = []
+        if not os.path.exists(INGESTION_LOG_FILE):
+            return duplicate_clusters
+
+        records = []
+        try:
+            with open(INGESTION_LOG_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        records.append(json.loads(line))
+        except Exception as e:
+            logger.error(f"Error scanning logs: {e}")
+            return []
+
+        # Group by doc_number
+        by_doc_number = {}
+        by_url = {}
+
+        for r in records:
+            d_num = (r.get("doc_number") or "").strip().lower()
+            u = (r.get("source_url") or "").strip().lower()
+            if d_num and d_num != "":
+                by_doc_number.setdefault(d_num, []).append(r)
+            if u and u not in ["", "manual_ingestion"]:
+                by_url.setdefault(u, []).append(r)
+
+        seen_keys = set()
+        for k, group in by_doc_number.items():
+            if len(group) > 1:
+                seen_keys.add(k)
+                duplicate_clusters.append({
+                    "cluster_key": f"Document Number: {k.upper()}",
+                    "cluster_type": "doc_number",
+                    "duplicate_count": len(group),
+                    "documents": group
+                })
+
+        for k, group in by_url.items():
+            if len(group) > 1 and k not in seen_keys:
+                duplicate_clusters.append({
+                    "cluster_key": f"Source URL: {k}",
+                    "cluster_type": "source_url",
+                    "duplicate_count": len(group),
+                    "documents": group
+                })
+
+        return duplicate_clusters
+
     def preview_from_url(self, url: str) -> Dict[str, Any]:
         html = self.fetch_url(url)
         cleaned = self.clean_html_to_text(html, url=url)
         metadata = self.extract_legal_metadata(cleaned["cleaned_text"], html_title=cleaned["page_title"], url=url)
         chunks = self.chunk_document(cleaned["cleaned_text"])
         
+        # Check duplicate
+        dup_check = self.check_existing_document(
+            doc_number=metadata.get("doc_number") or "",
+            title=metadata.get("title") or "",
+            source_url=url
+        )
+
         return {
             "metadata": metadata,
             "char_count": cleaned["char_count"],
             "word_count": cleaned["word_count"],
             "chunk_count": len(chunks),
             "sample_chunks": chunks[:3],
-            "full_cleaned_text": cleaned["cleaned_text"]
+            "full_cleaned_text": cleaned["cleaned_text"],
+            "duplicate_check": dup_check
         }
 
     def preview_from_raw(self, content: str, is_html: bool = False, title_hint: str = "", category_hint: str = "") -> Dict[str, Any]:
@@ -255,19 +485,37 @@ class LegalIngestionService:
             
         chunks = self.chunk_document(text)
         
+        # Check duplicate
+        dup_check = self.check_existing_document(
+            doc_number=metadata.get("doc_number") or "",
+            title=metadata.get("title") or "",
+            source_url=metadata.get("source_url") or ""
+        )
+
         return {
             "metadata": metadata,
             "char_count": len(text),
             "word_count": len(text.split()),
             "chunk_count": len(chunks),
             "sample_chunks": chunks[:3],
-            "full_cleaned_text": text
+            "full_cleaned_text": text,
+            "duplicate_check": dup_check
         }
 
-    def commit_document_to_qdrant(self, metadata: Dict[str, Any], full_text: str) -> Dict[str, Any]:
+    def commit_document_to_qdrant(self, metadata: Dict[str, Any], full_text: str, overwrite: bool = False) -> Dict[str, Any]:
         chunks = self.chunk_document(full_text)
         if not chunks:
             raise ValueError("No valid chunks could be created from the provided document text.")
+
+        # If overwrite is requested, purge existing points for this document first
+        if overwrite:
+            try:
+                self.delete_document_from_qdrant(
+                    doc_number=metadata.get("doc_number") or "",
+                    source_url=metadata.get("source_url") or ""
+                )
+            except Exception as del_err:
+                logger.warning(f"Notice during overwrite purge: {del_err}")
 
         logger.info(f"Generating dense embeddings for {len(chunks)} chunks via {self.embed_model}...")
         dense_vectors = self.dense_embedder.embed_documents(chunks)
@@ -359,7 +607,8 @@ class LegalIngestionService:
             "category": metadata.get("category"),
             "chunks_indexed": len(chunks),
             "points_count": len(points),
-            "ingested_at": ingested_at
+            "ingested_at": ingested_at,
+            "overwritten": overwrite
         }
 
     def get_ingestion_history(self, limit: int = 20) -> List[Dict[str, Any]]:

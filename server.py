@@ -744,6 +744,17 @@ class IngestCommitRequest(BaseModel):
     ponente: Optional[str] = ""
     source_url: Optional[str] = "manual_ingestion"
     full_text: str = Field(..., min_length=50)
+    overwrite: Optional[bool] = False
+
+class IngestCheckDuplicateRequest(BaseModel):
+    doc_number: Optional[str] = ""
+    title: Optional[str] = ""
+    source_url: Optional[str] = ""
+
+class IngestDeleteRequest(BaseModel):
+    doc_id: Optional[str] = ""
+    doc_number: Optional[str] = ""
+    source_url: Optional[str] = ""
 
 @app.post("/api/manage/ingest/preview-url")
 async def preview_ingest_url(req: IngestPreviewUrlRequest, auth: str = Depends(verify_admin)):
@@ -772,6 +783,47 @@ async def preview_ingest_raw(req: IngestPreviewRawRequest, auth: str = Depends(v
         logger.error(f"Error in preview_ingest_raw: {e}", exc_info=True)
         return JSONResponse(status_code=400, content={"error": str(e)})
 
+@app.post("/api/manage/ingest/check-duplicate")
+async def check_document_duplicate(req: IngestCheckDuplicateRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        res = service.check_existing_document(
+            doc_number=req.doc_number or "",
+            title=req.title or "",
+            source_url=req.source_url or ""
+        )
+        return res
+    except Exception as e:
+        logger.error(f"Error in check_document_duplicate: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/manage/ingest/duplicates")
+async def get_all_duplicates(auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        clusters = service.scan_all_duplicates()
+        return {"clusters": clusters, "total_clusters": len(clusters)}
+    except Exception as e:
+        logger.error(f"Error scanning duplicates: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/manage/ingest/delete")
+async def delete_ingest_document(req: IngestDeleteRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        res = service.delete_document_from_qdrant(
+            doc_id=req.doc_id or "",
+            doc_number=req.doc_number or "",
+            source_url=req.source_url or ""
+        )
+        return res
+    except Exception as e:
+        logger.error(f"Error in delete_ingest_document: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.post("/api/manage/ingest/commit")
 async def commit_ingest_document(req: IngestCommitRequest, auth: str = Depends(verify_admin)):
     try:
@@ -787,7 +839,7 @@ async def commit_ingest_document(req: IngestCommitRequest, auth: str = Depends(v
             "ponente": req.ponente or "",
             "source_url": req.source_url or "manual_ingestion"
         }
-        res = service.commit_document_to_qdrant(metadata, req.full_text)
+        res = service.commit_document_to_qdrant(metadata, req.full_text, overwrite=req.overwrite or False)
         return res
     except Exception as e:
         logger.error(f"Error in commit_ingest_document: {e}", exc_info=True)
