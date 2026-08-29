@@ -1017,6 +1017,64 @@ def deduplicate_sources(sources_list: List[Dict[str, Any]]) -> List[Dict[str, An
 
     return deduped
 
+PHILIPPINE_LEGAL_TAXONOMY_MAP = {
+    # Torts, Accidents, Quasi-Delicts, Negligence, Personal Injury
+    r"\b(?:accidental(?:ly)?\s+injur\w*|sue\s+(?:me\s+|someone\s+)?for\s+injur\w*|friend\s+injur\w*|injur\w*\s+friend|sports\s+injur\w*|slip\s+and\s+fall|negligen\w*|vehicular\s+accident|car\s+crash|hit\s+and\s+run|injured\s+accidentally|makasuhan\s+sa\s+aksidente|aksidente)\b":
+        "Civil Code Republic Act 386 Article 2176 quasi-delict culpa aquiliana fault negligence damages proximate cause assumption of risk fortuitous event separate civil action",
+
+    # Family Law / Child Custody / Annulment / Psychological Incapacity / Support
+    r"\b(?:child\s+custody|custody\s+of\s+child|visitation\s+rights|support\s+child|illegitimate\s+child|sole\s+custody|tender\s+age|karapatan\s+sa\s+bata|sustento)\b":
+        "Family Code Executive Order 209 Article 213 child custody parental authority support illegitimate child tender age rule best interest of the child",
+
+    r"\b(?:annulment|nullity\s+of\s+marriage|psychological\s+incapacity|void\s+marriage|separate\s+from\s+spouse|hiwalay\s+sa\s+asawa)\b":
+        "Family Code Executive Order 209 Article 36 psychological incapacity Tan-Andal Molina Declaration of Absolute Nullity",
+
+    # Labor Law / Illegal Dismissal / Severance / 13th Month Pay / Overtime
+    r"\b(?:fired\s+without\s+cause|illegal\s+dismissal|constructive\s+dismissal|separation\s+pay|severance|unpaid\s+wages|backwages|tinanggal\s+sa\s+trabaho)\b":
+        "Labor Code Presidential Decree 442 Article 297 Article 298 just cause authorized cause illegal dismissal separation pay backwages NLRC",
+
+    r"\b(?:13th\s+month\s+pay|overtime\s+pay|holiday\s+pay|night\s+shift\s+differential|service\s+incentive\s+leave|sahod|leave\s+credits)\b":
+        "Presidential Decree 851 13th month pay Labor Code overtime holiday pay service incentive leave mandatory wage",
+
+    # Bouncing Checks / BP 22 / Estafa
+    r"\b(?:bounced?\s+check|rubber\s+check|check\s+no\s+funds?|tseke|tumalbog\s+na\s+tseke)\b":
+        "Batas Pambansa Blg 22 BP 22 Bouncing Checks Law notice of dishonor Revised Penal Code Article 315 estafa deceit",
+
+    # Cybercrime / Cyber Libel / Defamation
+    r"\b(?:cyber\s*libel|online\s+defamation|libel\s+on\s+facebook|paninirang\s+puri\s+online|social\s+media\s+post)\b":
+        "Republic Act 10175 Cybercrime Prevention Act Section 4 Article 355 Revised Penal Code cyber libel prescription period Causing Disini",
+
+    # Property / Tenancy / Ejectment / Lease
+    r"\b(?:evict(?:ion)?|eject(?:ment)?|landlord|tenant|unpaid\s+rent|squatter|ejectment\s+suit|paalisin\s+sa\s+bahay|upahan)\b":
+        "Rule 70 Rules of Court unlawful detainer forcible entry ejectment Rent Control Act Republic Act 9653 demand to vacate",
+
+    # Succession / Inheritance / Estate Settlement
+    r"\b(?:inheritance|mana|will\s+and\s+testament|estate\s+distribution|heirs|legitime|pamana|hati\s+sa\s+lupa)\b":
+        "Civil Code Republic Act 386 succession legitime compulsory heirs Article 887 intestate testate extrajudicial settlement",
+
+    # Prescription / Limitations of Actions
+    r"\b(?:prescriptive\s+period|prescription\s+of\s+crime|statute\s+of\s+limitations|kailan\s+mapapaso|prescribe\s+ang\s+kaso)\b":
+        "Article 1146 Article 1144 Civil Code Act 3326 prescription of offenses Revised Penal Code Article 90"
+}
+
+def expand_legal_taxonomy_query(query: str) -> str:
+    """
+    Translates conversational / layman queries into authoritative Philippine legal taxonomy keywords
+    (statutes, articles, doctrines, Latin legal maxims) to maximize recall in Qdrant hybrid retrieval.
+    """
+    if not query:
+        return query
+    
+    expanded_terms = []
+    for pattern, legal_keywords in PHILIPPINE_LEGAL_TAXONOMY_MAP.items():
+        if re.search(pattern, query, re.IGNORECASE):
+            expanded_terms.append(legal_keywords)
+            
+    if expanded_terms:
+        # Append distinct legal keywords to search query
+        return f"{query} " + " ".join(expanded_terms)
+    return query
+
 class LegalRetriever:
     def __init__(
         self,
@@ -1140,9 +1198,12 @@ class LegalRetriever:
 
         query_filter = models.Filter(must=must_conditions) if must_conditions else None
 
+        # Expand conversational queries with Philippine Legal Taxonomy keywords
+        search_query = expand_legal_taxonomy_query(query)
+
         # 1. Stage 1: Candidate Search (Dense + Sparse RRF over top 50)
-        q_dense = self.dense_embedder.embed_query(query)
-        q_sparse = list(self.sparse_embedder.embed([query]))[0]
+        q_dense = self.dense_embedder.embed_query(search_query)
+        q_sparse = list(self.sparse_embedder.embed([search_query]))[0]
         candidate_limit = 50
 
         with _QDRANT_LOCK:
