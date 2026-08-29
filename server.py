@@ -105,7 +105,7 @@ class ChatRequest(BaseModel):
     temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
     num_ctx: Optional[int] = Field(default=8192, ge=1024, le=16384)
     category: Optional[str] = Field(default="All", max_length=50)
-    top_k: Optional[int] = Field(default=4, ge=1, le=16)
+    top_k: Optional[int] = Field(default=7, ge=1, le=16)
     year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
     year_max: Optional[int] = Field(default=2026, ge=1900, le=2026)
 
@@ -826,7 +826,7 @@ async def read_disclaimer():
 class LegalSearchRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=1000)
     category: Optional[str] = None
-    top_k: int = Field(default=4, ge=1, le=20)
+    top_k: int = Field(default=7, ge=1, le=20)
     score_threshold: float = Field(default=0.20, ge=0.0, le=1.0)
 
 @app.post("/api/legal/search")

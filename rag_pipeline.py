@@ -1379,7 +1379,7 @@ Text:
     def query(
         self,
         question: str,
-        limit: int = 5,
+        limit: int = 7,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -1416,7 +1416,7 @@ Text:
     def stream_query(
         self,
         question: str,
-        limit: int = 5,
+        limit: int = 7,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
