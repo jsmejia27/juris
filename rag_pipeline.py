@@ -690,15 +690,31 @@ def extract_lexical_anchors_with_tiers(query: str) -> List[Dict[str, Any]]:
         return anchors
 
     # 1. G.R. Docket Numbers (Tier 1 - Highest Specificity)
-    gr_matches = list(re.finditer(r'\b(?:G\.R\.|GR)(?:\s+No\.?)?\s*([L0-9\-]+)\b', query, re.IGNORECASE))
-    for m in gr_matches:
+    # Match both single (G.R. No. 162335) and consolidated (G.R. Nos. 162335 & 162605, G.R. Nos. 162335, 162605)
+    seen_nums = set()
+    # Step A: Find all individual G.R. No. / GR Nos. occurrences
+    for m in re.finditer(r'\b(?:G\.R\.|GR)(?:\s+(?:Nos?\.|No\.?|L-))?\s*([L0-9\-]+)', query, re.IGNORECASE):
         raw_num = m.group(1).strip()
         clean_num = raw_num.replace('-', '')
-        anchors.append({
-            "tier": "tier_gr_docket",
-            "terms": [f"g.r. {raw_num.lower()}", f"gr {raw_num.lower()}", raw_num.lower(), clean_num.lower()],
-            "raw": m.group(0)
-        })
+        if clean_num not in seen_nums and len(clean_num) >= 4:
+            seen_nums.add(clean_num)
+            anchors.append({
+                "tier": "tier_gr_docket",
+                "terms": [f"g.r. {raw_num.lower()}", f"gr {raw_num.lower()}", raw_num.lower(), clean_num.lower()],
+                "raw": f"G.R. No. {raw_num}"
+            })
+    # Step B: Also parse consolidated blocks (e.g. G.R. Nos. 162335 & 162605 or 162335, 162605)
+    for block in re.finditer(r'\b(?:G\.R\.|GR)(?:\s+(?:Nos?\.|No\.?|L-))?\s*([L0-9\-\,\s\&and]+)', query, re.IGNORECASE):
+        for num_match in re.finditer(r'\b([L0-9\-]{5,10})\b', block.group(1)):
+            raw_num = num_match.group(1).strip()
+            clean_num = raw_num.replace('-', '')
+            if clean_num not in seen_nums and len(clean_num) >= 4:
+                seen_nums.add(clean_num)
+                anchors.append({
+                    "tier": "tier_gr_docket",
+                    "terms": [f"g.r. {raw_num.lower()}", f"gr {raw_num.lower()}", raw_num.lower(), clean_num.lower()],
+                    "raw": f"G.R. No. {raw_num}"
+                })
 
     # 2. RA with Section (Tier 2 - High Specificity)
     ra_sec_matches = []
