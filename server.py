@@ -105,7 +105,7 @@ class ChatRequest(BaseModel):
     temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
     num_ctx: Optional[int] = Field(default=16384, ge=1024, le=32768)
     category: Optional[str] = Field(default="All", max_length=50)
-    top_k: Optional[int] = Field(default=7, ge=1, le=16)
+    top_k: Optional[int] = Field(default=5, ge=1, le=16)
     year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
     year_max: Optional[int] = Field(default=2026, ge=1900, le=2026)
 
@@ -159,11 +159,12 @@ async def chat_stream(req: ChatRequest):
         # 1. Retrieve Local Statutes & Jurisprudence (Qdrant Two-Stage Retrieval)
         category_filter = None if req.category == "All" else req.category
         loop = asyncio.get_event_loop()
+        effective_limit = min(req.top_k or 5, 5)
         sources = await loop.run_in_executor(
             None,
             lambda: pipeline.retriever.retrieve(
                 query=retrieval_query,
-                limit=req.top_k,
+                limit=effective_limit,
                 category=category_filter,
                 year_min=req.year_min,
                 year_max=req.year_max
@@ -176,7 +177,7 @@ async def chat_stream(req: ChatRequest):
         try:
             bills_data = await loop.run_in_executor(
                 None,
-                lambda: pipeline.congress_client.search_bills(retrieval_query, limit_per_chamber=2)
+                lambda: pipeline.congress_client.search_bills(retrieval_query, limit_per_chamber=1)
             )
             bills_context = pipeline.congress_client.format_bills_context(bills_data)
 
@@ -205,15 +206,15 @@ async def chat_stream(req: ChatRequest):
         except Exception as err:
             logger.warning(f"Non-blocking Open Congress query exception: {err}")
 
-        # Deduplicate all statutory sources and bills so each authority appears only once
-        deduped_sources = deduplicate_sources(all_sources)
+        # Deduplicate all statutory sources and bills, capping to 5-6 citations only
+        deduped_sources = deduplicate_sources(all_sources)[:6]
 
         # Send combined sources event
         yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources})}\n\n"
         await asyncio.sleep(0.01)
 
         # 3. Format Context & Multi-Turn Prompts for Dual Tabs
-        context_str = pipeline.format_context(sources, bills_context=bills_context)
+        context_str = pipeline.format_context(deduped_sources, bills_context=bills_context)
         history_section = pipeline.format_history_section(history_dicts)
         
         prompt_tab1 = PROMPT_TAB1_TREATISE.format(

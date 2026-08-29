@@ -920,7 +920,7 @@ class LegalCrossEncoderRanker:
             self._flash_ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
             logger.info("Initialized FlashRank (ms-marco-TinyBERT-L-2-v2).")
 
-    def rerank_passages(self, query: str, candidate_docs: List[Dict[str, Any]], top_k: int = 8) -> List[Dict[str, Any]]:
+    def rerank_passages(self, query: str, candidate_docs: List[Dict[str, Any]], top_k: int = 5) -> List[Dict[str, Any]]:
         if not candidate_docs:
             return []
 
@@ -1121,7 +1121,7 @@ class LegalRetriever:
     def retrieve(
         self,
         query: str,
-        limit: int = 8,
+        limit: int = 5,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -1441,7 +1441,7 @@ Text:
     def query(
         self,
         question: str,
-        limit: int = 7,
+        limit: int = 5,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -1478,7 +1478,7 @@ Text:
     def stream_query(
         self,
         question: str,
-        limit: int = 7,
+        limit: int = 5,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
