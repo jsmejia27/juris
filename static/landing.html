@@ -761,13 +761,6 @@
             if (card) {
                 renderStreamingOutput(card, turn.thought, turn, turnIdx);
             }
-            // If switching to Tab 2 and digest is unrequested, and cooldown is complete, immediately generate and stream!
-            if (tabNum === 2 && turn.tab2Status === 'unrequested' && !turn.tab2Response) {
-                const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
-                if (!isCooling && !isGenerating) {
-                    requestExecutiveDigest(turnIdx);
-                }
-            }
         }
 
         function renderStreamingOutput(container, thought, turnDataOrText, turnIdx = null) {
@@ -870,7 +863,7 @@
                     `;
                 }
 
-                // If on Tab 1 and Executive Digest has not yet been generated, show Execute Digest banner once cooldown completes
+                // If on Tab 1 and Executive Digest has not yet been generated, show optional Generate Executive Digest banner
                 if (turnIdx !== null && (!turn.tab2Status || turn.tab2Status === 'unrequested') && !turn.tab2Response) {
                     const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
                     if (!isCooling) {
@@ -881,13 +874,13 @@
                                         <i data-lucide="sparkles" class="w-4 h-4 text-gold"></i>
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-slate-900">Executive Editorial Digest Ready</div>
-                                        <div class="text-[11px] text-slate-600">Open Tab 2 and synthesize the core legal holdings & strategic compliance takeaways.</div>
+                                        <div class="text-xs font-bold text-slate-900">Executive Editorial Digest (Optional)</div>
+                                        <div class="text-[11px] text-slate-600">Synthesize the core legal holdings & strategic compliance takeaways.</div>
                                     </div>
                                 </div>
-                                <button onclick="switchTurnTab(${turnIdx}, 2)" class="w-full sm:w-auto px-4 py-2 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-xs flex items-center justify-center gap-1.5 shrink-0">
-                                    <i data-lucide="play" class="w-3.5 h-3.5 text-gold fill-gold"></i>
-                                    <span>Execute Digest</span>
+                                <button onclick="requestExecutiveDigest(${turnIdx})" class="w-full sm:w-auto px-4 py-2 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-xs flex items-center justify-center gap-1.5 shrink-0">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"></i>
+                                    <span>Generate Executive Digest</span>
                                 </button>
                             </div>
                         `;
@@ -922,7 +915,7 @@
                                 <div class="space-y-1">
                                     <h4 class="font-bold text-amber-950 text-sm">Cooldown Period Active</h4>
                                     <p class="text-xs text-amber-800 leading-relaxed max-w-md mx-auto">
-                                        To maintain optimal hardware throughput, you can request the Executive Editorial Digest once the cooldown timer completes.
+                                        To maintain optimal hardware throughput, you can generate the optional Executive Editorial Digest once the cooldown timer completes.
                                     </p>
                                 </div>
                                 <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-200/80 border border-amber-300/90 text-amber-950 text-xs font-mono font-bold">
@@ -938,9 +931,9 @@
                                     <i data-lucide="file-text" class="w-5 h-5"></i>
                                 </div>
                                 <div class="space-y-1">
-                                    <h4 class="font-bold text-slate-900 text-sm">Generate Executive Editorial Digest?</h4>
+                                    <h4 class="font-bold text-slate-900 text-sm">Executive Editorial Digest (Optional)</h4>
                                     <p class="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
-                                        Would you like to synthesize a condensed executive summary, statutory citations, and strategic compliance takeaways for this inquiry?
+                                        Generate a condensed executive summary, core statutory citations, and strategic compliance takeaways for this inquiry.
                                     </p>
                                 </div>
                                 <button onclick="requestExecutiveDigest(${turnIdx})" class="px-5 py-2.5 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-md flex items-center gap-2 mx-auto">
@@ -966,7 +959,7 @@
                             <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
                                 <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
                                 <span>📋 Executive Digest</span>
-                                ${turn.tab2Status === 'generating' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ((!turn.tab2Status || turn.tab2Status === 'unrequested') && (!cooldownSecondsRemaining || cooldownSecondsRemaining <= 0) ? '<span class="px-1.5 py-0.5 bg-amber-200/80 text-amber-900 text-[9px] font-bold rounded-md uppercase tracking-wider">Execute</span>' : '')}
+                                ${turn.tab2Status === 'generating' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ((!turn.tab2Status || turn.tab2Status === 'unrequested') ? '<span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 text-[9px] font-bold rounded-md uppercase tracking-wider">Optional</span>' : '')}
                             </button>
                         </div>
 
