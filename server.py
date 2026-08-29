@@ -689,6 +689,89 @@ async def stop_ingestion(auth: str = Depends(verify_admin)):
         return {"message": "Stop signal sent to ingestion job"}
     return {"message": "No active ingestion job to stop"}
 
+# ==========================================
+# LIVE DOCUMENT INGESTION & IMPORTER ENDPOINTS
+# ==========================================
+
+class IngestPreviewUrlRequest(BaseModel):
+    url: str = Field(..., min_length=5, max_length=1000)
+
+class IngestPreviewRawRequest(BaseModel):
+    content: str = Field(..., min_length=20)
+    is_html: Optional[bool] = False
+    title: Optional[str] = None
+    category: Optional[str] = None
+
+class IngestCommitRequest(BaseModel):
+    title: str = Field(..., min_length=3, max_length=400)
+    category: str = Field(..., max_length=100)
+    doc_type: Optional[str] = "Statute"
+    doc_number: Optional[str] = ""
+    year: Optional[int] = None
+    date: Optional[str] = ""
+    ponente: Optional[str] = ""
+    source_url: Optional[str] = "manual_ingestion"
+    full_text: str = Field(..., min_length=50)
+
+@app.post("/api/manage/ingest/preview-url")
+async def preview_ingest_url(req: IngestPreviewUrlRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        preview = service.preview_from_url(req.url)
+        return preview
+    except Exception as e:
+        logger.error(f"Error in preview_ingest_url: {e}", exc_info=True)
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+@app.post("/api/manage/ingest/preview-raw")
+async def preview_ingest_raw(req: IngestPreviewRawRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        preview = service.preview_from_raw(
+            content=req.content,
+            is_html=req.is_html or False,
+            title_hint=req.title or "",
+            category_hint=req.category or ""
+        )
+        return preview
+    except Exception as e:
+        logger.error(f"Error in preview_ingest_raw: {e}", exc_info=True)
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+@app.post("/api/manage/ingest/commit")
+async def commit_ingest_document(req: IngestCommitRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        metadata = {
+            "title": req.title.strip(),
+            "category": req.category.strip(),
+            "doc_type": req.doc_type or "Statute",
+            "doc_number": req.doc_number or "",
+            "year": req.year or time.gmtime().tm_year,
+            "date": req.date or "",
+            "ponente": req.ponente or "",
+            "source_url": req.source_url or "manual_ingestion"
+        }
+        res = service.commit_document_to_qdrant(metadata, req.full_text)
+        return res
+    except Exception as e:
+        logger.error(f"Error in commit_ingest_document: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/manage/ingest/history")
+async def get_ingest_history(limit: int = 20, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        history = service.get_ingestion_history(limit=limit)
+        return {"history": history}
+    except Exception as e:
+        logger.error(f"Error in get_ingest_history: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

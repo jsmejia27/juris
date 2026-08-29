@@ -173,6 +173,191 @@
             </div>
         </div>
 
+        <!-- Live Legal Ingestion & Single Document Importer -->
+        <div class="admin-card p-6 border-amber-500/30">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <i data-lucide="file-plus-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            Live Legal Document Ingestion &amp; Importer
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/60 text-amber-400 font-mono">Instant Indexer</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Add newly enacted statutes, Supreme Court decisions, or administrative circulars directly to Qdrant.</p>
+                    </div>
+                </div>
+
+                <!-- Input Mode Toggle -->
+                <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 gap-1 w-full sm:w-auto">
+                    <button onclick="switchIngestMode('url')" id="modeBtnUrl" class="flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs">
+                        <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                        <span>Direct URL Fetch</span>
+                    </button>
+                    <button onclick="switchIngestMode('raw')" id="modeBtnRaw" class="flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
+                        <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                        <span>Paste HTML / Text</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode A: Direct URL Input -->
+            <div id="ingestUrlContainer" class="space-y-3">
+                <div class="flex flex-col sm:flex-row items-stretch gap-2">
+                    <div class="relative flex-1">
+                        <i data-lucide="link" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input 
+                            type="url" 
+                            id="ingestUrlInput" 
+                            placeholder="e.g. https://www.lawphil.net/statutes/repacts/ra2025/ra_12254_2025.html" 
+                            class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-200 placeholder:text-slate-600 outline-none transition"
+                        />
+                    </div>
+                    <button onclick="fetchUrlPreview()" id="fetchUrlBtn" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shrink-0 shadow-lg shadow-amber-950/40">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Fetch &amp; Extract</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 flex-wrap">
+                    <span class="text-slate-500">Quick Test URLs:</span>
+                    <button onclick="populateSampleUrl('https://www.lawphil.net/statutes/repacts/ra2025/ra_12254_2025.html')" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-300 text-[10px] transition">
+                        RA 12254 (2025)
+                    </button>
+                    <button onclick="populateSampleUrl('https://www.lawphil.net/statutes/repacts/ra2024/ra_12066_2024.html')" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-300 text-[10px] transition">
+                        RA 12066 CREATE MORE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode B: Raw HTML / Text Input (Hidden by default) -->
+            <div id="ingestRawContainer" class="hidden space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-mono text-slate-400 mb-1">Document Title (Optional Hint)</label>
+                        <input type="text" id="rawTitleHint" placeholder="e.g. NPC Circular No. 2022-04" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-amber-500" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-mono text-slate-400 mb-1">Category (Optional Hint)</label>
+                        <select id="rawCategoryHint" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-amber-500">
+                            <option value="">Auto-Detect from Content</option>
+                            <option value="Republic Act">Republic Act</option>
+                            <option value="Jurisprudence">Jurisprudence (Supreme Court)</option>
+                            <option value="Executive & Administrative Issuances">Executive &amp; Administrative Issuances</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono text-slate-400 mb-1">Raw HTML or Full Legal Text</label>
+                    <textarea id="rawContentInput" rows="6" placeholder="Paste full HTML source or clean legal text here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 outline-none focus:border-amber-500 custom-scroll"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="analyzeRawPreview()" id="analyzeRawBtn" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 transition active:scale-95 shadow-lg shadow-amber-950/40">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Analyze &amp; Prepare Chunks</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Verification & Preview Drawer (Populated after fetching/analyzing) -->
+            <div id="ingestPreviewCard" class="hidden mt-6 pt-5 border-t border-slate-800/80 space-y-4 animate-in fade-in zoom-in-95">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h3 class="font-bold text-white text-sm">Extracted Legal Document Preview</h3>
+                    </div>
+                    <span id="previewStatsBadge" class="text-[11px] font-mono px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+                        0 chunks &bull; 0 words
+                    </span>
+                </div>
+
+                <!-- Editable Metadata Form Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Document Title</label>
+                        <input type="text" id="previewTitle" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Category</label>
+                        <select id="previewCategory" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400">
+                            <option value="Republic Act">Republic Act</option>
+                            <option value="Jurisprudence">Jurisprudence (Supreme Court)</option>
+                            <option value="Executive & Administrative Issuances">Executive &amp; Administrative Issuances</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Document / RA / G.R. No.</label>
+                        <input type="text" id="previewDocNumber" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none focus:border-amber-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Promulgation / Date</label>
+                        <input type="text" id="previewDate" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Year</label>
+                        <input type="number" id="previewYear" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none focus:border-amber-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Document Type</label>
+                        <input type="text" id="previewDocType" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold">Ponente / Signatory</label>
+                        <input type="text" id="previewPonente" placeholder="Optional" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                    </div>
+                </div>
+
+                <!-- Sample Chunks Preview -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+                        <span>Sample Chunks Preview (First 3):</span>
+                        <span id="previewChunkCountLabel">3 sample chunks</span>
+                    </div>
+                    <div id="previewChunksList" class="space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+                    <button onclick="discardPreview()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+                        Discard Preview
+                    </button>
+                    <button onclick="commitDocumentToQdrant()" id="commitDocumentBtn" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-950/40">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Confirm &amp; Index into Knowledge Base</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ingest History / Audit Table -->
+            <div class="mt-8 pt-6 border-t border-slate-800">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="history" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Recently Ingested Live Documents</span>
+                    </h3>
+                    <button onclick="loadIngestionHistory()" class="text-[11px] font-mono text-amber-400 hover:underline">Refresh History</button>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Title / Document</th>
+                                <th class="p-3 hidden sm:table-cell">Category</th>
+                                <th class="p-3 hidden md:table-cell">Year</th>
+                                <th class="p-3">Chunks</th>
+                                <th class="p-3">Ingested At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingestHistoryTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Available Datasets Table -->
         <div class="admin-card p-6">
             <div class="flex items-center justify-between mb-5">
@@ -628,13 +813,248 @@
             }
         }
 
-        function escapeHtml(string) {
-            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        // ====================================================
+        // LIVE SINGLE DOCUMENT INGESTION HANDLERS
+        // ====================================================
+        let currentPreviewData = null;
+
+        function switchIngestMode(mode) {
+            const urlContainer = document.getElementById('ingestUrlContainer');
+            const rawContainer = document.getElementById('ingestRawContainer');
+            const btnUrl = document.getElementById('modeBtnUrl');
+            const btnRaw = document.getElementById('modeBtnRaw');
+
+            if (mode === 'url') {
+                urlContainer.classList.remove('hidden');
+                rawContainer.classList.add('hidden');
+                btnUrl.className = "flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs";
+                btnRaw.className = "flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
+            } else {
+                urlContainer.classList.add('hidden');
+                rawContainer.classList.remove('hidden');
+                btnRaw.className = "flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs";
+                btnUrl.className = "flex-1 sm:flex-none text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
+            }
+            lucide.createIcons();
+        }
+
+        function populateSampleUrl(url) {
+            const input = document.getElementById('ingestUrlInput');
+            if (input) {
+                input.value = url;
+                fetchUrlPreview();
+            }
+        }
+
+        async function fetchUrlPreview() {
+            const url = document.getElementById('ingestUrlInput').value.trim();
+            if (!url) {
+                alert("Please enter a valid legal URL.");
+                return;
+            }
+
+            const btn = document.getElementById('fetchUrlBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Fetching...</span>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/preview-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentPreviewData = data;
+                    renderPreview(data);
+                } else {
+                    alert(data.error || "Failed to fetch or parse URL.");
+                }
+            } catch (err) {
+                alert("Error fetching URL: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>Fetch &amp; Extract</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function analyzeRawPreview() {
+            const content = document.getElementById('rawContentInput').value.trim();
+            if (!content || content.length < 20) {
+                alert("Please enter or paste at least 20 characters of legal text or HTML.");
+                return;
+            }
+
+            const title = document.getElementById('rawTitleHint').value.trim();
+            const category = document.getElementById('rawCategoryHint').value;
+            const isHtml = content.includes("<") && content.includes(">");
+
+            const btn = document.getElementById('analyzeRawBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Analyzing...</span>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/preview-raw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content,
+                        is_html: isHtml,
+                        title: title || null,
+                        category: category || null
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentPreviewData = data;
+                    renderPreview(data);
+                } else {
+                    alert(data.error || "Failed to analyze raw content.");
+                }
+            } catch (err) {
+                alert("Error analyzing content: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>Analyze &amp; Prepare Chunks</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        function renderPreview(data) {
+            const card = document.getElementById('ingestPreviewCard');
+            const meta = data.metadata || {};
+
+            document.getElementById('previewTitle').value = meta.title || "";
+            document.getElementById('previewCategory').value = meta.category || "Republic Act";
+            document.getElementById('previewDocNumber').value = meta.doc_number || "";
+            document.getElementById('previewDate').value = meta.date || "";
+            document.getElementById('previewYear').value = meta.year || new Date().getFullYear();
+            document.getElementById('previewDocType').value = meta.doc_type || "Statute";
+            document.getElementById('previewPonente').value = meta.ponente || "";
+
+            document.getElementById('previewStatsBadge').innerText = `${data.chunk_count} chunks \u2022 ${data.word_count.toLocaleString()} words`;
+            document.getElementById('previewChunkCountLabel').innerText = `Showing first ${Math.min(3, data.sample_chunks.length)} of ${data.chunk_count} total chunks`;
+
+            const chunksList = document.getElementById('previewChunksList');
+            chunksList.innerHTML = data.sample_chunks.map((chk, i) => `
+                <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[11px] leading-relaxed">
+                    <div class="text-[10px] text-amber-400 font-bold mb-1">CHUNK #${i + 1} (${chk.length} chars)</div>
+                    <div class="line-clamp-3">${escapeHtml(chk)}</div>
+                </div>
+            `).join('');
+
+            card.classList.remove('hidden');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            lucide.createIcons();
+        }
+
+        function discardPreview() {
+            currentPreviewData = null;
+            document.getElementById('ingestPreviewCard').classList.add('hidden');
+        }
+
+        async function commitDocumentToQdrant() {
+            if (!currentPreviewData || !currentPreviewData.full_cleaned_text) {
+                alert("No document is currently staged for indexing.");
+                return;
+            }
+
+            const title = document.getElementById('previewTitle').value.trim();
+            const category = document.getElementById('previewCategory').value;
+            const docNumber = document.getElementById('previewDocNumber').value.trim();
+            const date = document.getElementById('previewDate').value.trim();
+            const year = parseInt(document.getElementById('previewYear').value) || new Date().getFullYear();
+            const docType = document.getElementById('previewDocType').value.trim();
+            const ponente = document.getElementById('previewPonente').value.trim();
+            const sourceUrl = currentPreviewData.metadata.source_url || "manual_ingestion";
+
+            if (!title) {
+                alert("Document Title is required.");
+                return;
+            }
+
+            const btn = document.getElementById('commitDocumentBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Generating Embeddings &amp; Indexing to Qdrant...</span>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/commit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        category,
+                        doc_number: docNumber,
+                        date,
+                        year,
+                        doc_type: docType,
+                        ponente,
+                        source_url: sourceUrl,
+                        full_text: currentPreviewData.full_cleaned_text
+                    })
+                });
+                const result = await res.json();
+                if (res.ok && result.status === 'success') {
+                    alert(`\u2705 Ingestion Successful!\n\nDocument: "${title}"\nIndexed ${result.chunks_indexed} vector chunks into Qdrant.`);
+                    discardPreview();
+                    document.getElementById('ingestUrlInput').value = '';
+                    document.getElementById('rawContentInput').value = '';
+                    fetchStats();
+                    loadIngestionHistory();
+                } else {
+                    alert(result.error || "Failed to commit document to Qdrant.");
+                }
+            } catch (err) {
+                alert("Error indexing document: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i><span>Confirm &amp; Index into Knowledge Base</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function loadIngestionHistory() {
+            try {
+                const res = await fetch('/api/manage/ingest/history');
+                if (!res.ok) return;
+                const data = await res.json();
+                const tbody = document.getElementById('ingestHistoryTableBody');
+                if (!tbody) return;
+
+                if (!data.history || data.history.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 text-xs">No manual document ingestions recorded yet.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.history.map(item => `
+                    <tr class="hover:bg-slate-900/60 transition">
+                        <td class="p-3">
+                            <div class="font-bold text-white max-w-md truncate" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                            <div class="text-[10px] text-slate-500 truncate max-w-xs">${escapeHtml(item.source_url || '')}</div>
+                        </td>
+                        <td class="p-3 hidden sm:table-cell">
+                            <span class="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 text-amber-400 text-[10px] font-mono">
+                                ${escapeHtml(item.category)}
+                            </span>
+                        </td>
+                        <td class="p-3 hidden md:table-cell text-slate-400">${escapeHtml(item.year || '')}</td>
+                        <td class="p-3 text-emerald-400 font-bold">${item.chunks_count} chunks</td>
+                        <td class="p-3 text-slate-400 text-[11px]">${escapeHtml(item.ingested_at || '')}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Error loading ingestion history:", err);
+            }
         }
 
         // Initialize
         loadOtpSetup();
         fetchStats();
+        loadIngestionHistory();
     </script>
 </body>
 </html>
