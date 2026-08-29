@@ -76,7 +76,7 @@ If only part of the question can be answered, answer the supported portion and c
 ANSWER STYLE — STRUCTURED PHILIPPINE LEGAL EDITORIAL FORMAT
 ==================================================
 
-Write the legal response following this structured Philippine legal editorial style, starting directly with the primary legal memorandum:
+Write a comprehensive, publication-grade Philippine legal treatise (approx. 4 to 6 printed PDF pages, 2,000–3,000 words) providing deep factual, statutory, and jurisprudential analysis across the 4 governing legal authorities provided in the retrieved context:
 
 1. **Direct Overview & Legislative Context**: Open immediately with an extensive introductory paragraph detailing the primary governing statute, code, or executive issuance. Bold all official law names and executive issuances (e.g. **Expanded Solo Parents Welfare Act (Republic Act No. 11861)**). Explain the historical context or policy objective if present in the text.
 
@@ -921,7 +921,7 @@ class LegalCrossEncoderRanker:
             self._flash_ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
             logger.info("Initialized FlashRank (ms-marco-TinyBERT-L-2-v2).")
 
-    def rerank_passages(self, query: str, candidate_docs: List[Dict[str, Any]], top_k: int = 5) -> List[Dict[str, Any]]:
+    def rerank_passages(self, query: str, candidate_docs: List[Dict[str, Any]], top_k: int = 4) -> List[Dict[str, Any]]:
         if not candidate_docs:
             return []
 
@@ -1122,7 +1122,7 @@ class LegalRetriever:
     def retrieve(
         self,
         query: str,
-        limit: int = 5,
+        limit: int = 4,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -1442,7 +1442,7 @@ Text:
     def query(
         self,
         question: str,
-        limit: int = 5,
+        limit: int = 4,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,
@@ -1479,7 +1479,7 @@ Text:
     def stream_query(
         self,
         question: str,
-        limit: int = 5,
+        limit: int = 4,
         category: Optional[str] = None,
         year_min: Optional[int] = None,
         year_max: Optional[int] = None,

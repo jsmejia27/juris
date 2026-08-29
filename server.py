@@ -105,7 +105,7 @@ class ChatRequest(BaseModel):
     temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
     num_ctx: Optional[int] = Field(default=24576, ge=1024, le=32768)
     category: Optional[str] = Field(default="All", max_length=50)
-    top_k: Optional[int] = Field(default=5, ge=1, le=16)
+    top_k: Optional[int] = Field(default=4, ge=1, le=16)
     year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
     year_max: Optional[int] = Field(default=2026, ge=1900, le=2026)
 
@@ -159,7 +159,7 @@ async def chat_stream(req: ChatRequest):
         # 1. Retrieve Local Statutes & Jurisprudence (Qdrant Two-Stage Retrieval)
         category_filter = None if req.category == "All" else req.category
         loop = asyncio.get_event_loop()
-        effective_limit = min(req.top_k or 5, 5)
+        effective_limit = min(req.top_k or 4, 4)
         sources = await loop.run_in_executor(
             None,
             lambda: pipeline.retriever.retrieve(
@@ -206,8 +206,8 @@ async def chat_stream(req: ChatRequest):
         except Exception as err:
             logger.warning(f"Non-blocking Open Congress query exception: {err}")
 
-        # Deduplicate all statutory sources and bills, capping to 5-6 citations only
-        deduped_sources = deduplicate_sources(all_sources)[:6]
+        # Deduplicate all statutory sources and bills, strictly capping to 4 citations
+        deduped_sources = deduplicate_sources(all_sources)[:4]
 
         # Send combined sources event
         yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources})}\n\n"

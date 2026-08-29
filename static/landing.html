@@ -360,7 +360,13 @@
                     <i data-lucide="book-open" class="w-4 h-4 text-gold shrink-0"></i>
                     Retrieved Authorities (<span id="sourceCount">0</span>)
                 </span>
-                <span class="text-[10px] sm:text-[11px] text-slate-400">Click authority for excerpt &amp; link</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] sm:text-[11px] text-slate-400 hidden sm:inline">Click authority for excerpt &amp; link</span>
+                    <button type="button" onclick="toggleSourcesDrawerCollapse()" id="toggleAuthoritiesBtn" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-md text-[10px] font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
+                        <span id="toggleAuthoritiesText">Hide</span>
+                        <i id="toggleAuthoritiesIcon" data-lucide="chevron-up" class="w-3 h-3 text-slate-500"></i>
+                    </button>
+                </div>
             </div>
             <div id="sourceChips" class="flex flex-wrap gap-1 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll">
                 <!-- Dynamically populated chips -->
@@ -633,7 +639,7 @@
                         model: currentModel,
                         temperature: 0.1,
                         num_ctx: 24576,
-                        top_k: 5
+                        top_k: 4
                     })
                 });
 
@@ -1300,10 +1306,34 @@
             return unique;
         }
 
+        let isAuthoritiesCollapsed = false;
+
+        function toggleSourcesDrawerCollapse() {
+            isAuthoritiesCollapsed = !isAuthoritiesCollapsed;
+            const chipsContainer = document.getElementById('sourceChips');
+            const toggleText = document.getElementById('toggleAuthoritiesText');
+            const toggleIcon = document.getElementById('toggleAuthoritiesIcon');
+            
+            if (chipsContainer) {
+                if (isAuthoritiesCollapsed) {
+                    chipsContainer.classList.add('hidden');
+                    if (toggleText) toggleText.textContent = "Show";
+                    if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-down');
+                } else {
+                    chipsContainer.classList.remove('hidden');
+                    if (toggleText) toggleText.textContent = "Hide";
+                    if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+                }
+                lucide.createIcons();
+            }
+        }
+
         function renderSourcesDrawer(sources) {
             const drawer = document.getElementById('sourcesDrawer');
             const chipsContainer = document.getElementById('sourceChips');
             const countEl = document.getElementById('sourceCount');
+            const toggleText = document.getElementById('toggleAuthoritiesText');
+            const toggleIcon = document.getElementById('toggleAuthoritiesIcon');
 
             const unique = deduplicateSources(sources);
             activeSourcesList = unique;
@@ -1334,6 +1364,16 @@
                 tag.onclick = () => openCitationModal(idx);
                 chipsContainer.appendChild(tag);
             });
+
+            if (isAuthoritiesCollapsed) {
+                chipsContainer.classList.add('hidden');
+                if (toggleText) toggleText.textContent = "Show";
+                if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-down');
+            } else {
+                chipsContainer.classList.remove('hidden');
+                if (toggleText) toggleText.textContent = "Hide";
+                if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
+            }
 
             drawer.classList.remove('hidden');
             lucide.createIcons();
