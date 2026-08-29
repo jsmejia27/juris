@@ -1,14 +1,16 @@
-# legal_ingestion_service.py
 import os
 import re
 import json
 import time
 import uuid
 import logging
+import threading
 import urllib.parse
 from typing import Dict, Any, List, Optional
 import requests
 from bs4 import BeautifulSoup
+
+_QDRANT_LOCK = threading.Lock()
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -332,6 +334,128 @@ class LegalIngestionService:
             "matched_by": matched_by,
             "match_count": len(existing_records),
             "existing_records": existing_records
+        }
+
+    def get_full_document_record(self, doc_id: str = "", doc_number: str = "", source_url: str = "", title: str = "") -> Dict[str, Any]:
+        """
+        Retrieves the complete document record and all its vector chunks from Qdrant.
+        Reconstructs the original text and groups all metadata.
+        """
+        filter_conditions = []
+        if doc_id:
+            filter_conditions.append(models.FieldCondition(key="doc_id", match=models.MatchValue(value=doc_id)))
+        if doc_number:
+            filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=doc_number)))
+            filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=doc_number)))
+            ra_digits = re.search(r'\b(?:ra|republic\s+act(?:\s+no\.)?)\s*(\d+)\b', doc_number, re.IGNORECASE)
+            if ra_digits:
+                d_num = ra_digits.group(1)
+                filter_conditions.append(models.FieldCondition(key="doc_number", match=models.MatchValue(value=f"RA {d_num}")))
+                filter_conditions.append(models.FieldCondition(key="gr_no", match=models.MatchValue(value=f"RA {d_num}")))
+        if source_url and source_url != "manual_ingestion":
+            filter_conditions.append(models.FieldCondition(key="source_url", match=models.MatchValue(value=source_url)))
+        if title and len(title) > 10:
+            filter_conditions.append(models.FieldCondition(key="title", match=models.MatchValue(value=title)))
+
+        if not doc_id and (doc_number or source_url or title):
+            try:
+                dup_check = self.check_existing_document(doc_number=doc_number, title=title, source_url=source_url)
+                if dup_check.get("is_duplicate") and dup_check.get("existing_records"):
+                    resolved_id = dup_check["existing_records"][0].get("doc_id")
+                    if resolved_id:
+                        filter_conditions.append(models.FieldCondition(key="doc_id", match=models.MatchValue(value=resolved_id)))
+            except Exception as res_err:
+                logger.debug(f"Could not resolve doc_id via duplicate checker: {res_err}")
+
+        if not filter_conditions:
+            raise ValueError("At least one parameter (doc_id, doc_number, source_url, or title) must be provided.")
+
+        scroll_filter = models.Filter(should=filter_conditions)
+        points = []
+        offset = None
+        max_chunks = 1000
+        
+        try:
+            with _QDRANT_LOCK:
+                for _ in range(2):  # max 2 pages = 2,000 chunks
+                    res, next_offset = self.client.scroll(
+                        collection_name=COLLECTION_NAME,
+                        scroll_filter=scroll_filter,
+                        limit=1000,
+                        offset=offset,
+                        with_payload=True,
+                        with_vectors=False
+                    )
+                    if res:
+                        points.extend(res)
+                    if not next_offset or not res or len(points) >= max_chunks:
+                        break
+                    offset = next_offset
+        except Exception as scroll_err:
+            logger.warning(f"Error scrolling points in get_full_document_record: {scroll_err}")
+
+        if not points:
+            return {"found": False, "message": "No matching document points found in knowledge base."}
+
+        first_payload = points[0].payload or {}
+        doc_title = first_payload.get("title") or title or "Philippine Legal Document"
+        category = first_payload.get("category") or "Statute"
+        doc_num = first_payload.get("doc_number") or first_payload.get("gr_no") or doc_number or ""
+        year = first_payload.get("year") or first_payload.get("date") or ""
+        date = first_payload.get("date") or ""
+        ponente = first_payload.get("ponente") or ""
+        src_url = first_payload.get("source_url") or source_url or ""
+        summary = first_payload.get("summary") or ""
+        key_provisions = first_payload.get("key_provisions") or ""
+        tags = first_payload.get("tags") or []
+        keywords = first_payload.get("keywords") or []
+        doc_id_canonical = first_payload.get("doc_id") or doc_id or doc_num
+
+        # Sort chunks by chunk_index
+        sorted_points = sorted(
+            points,
+            key=lambda p: (p.payload or {}).get("chunk_index", 1)
+        )
+
+        chunks = []
+        for idx, pt in enumerate(sorted_points, 1):
+            p_load = pt.payload or {}
+            c_text = p_load.get("text", "").strip()
+            c_index = p_load.get("chunk_index", idx)
+            chunks.append({
+                "point_id": pt.id,
+                "chunk_index": c_index,
+                "total_chunks": p_load.get("total_chunks", len(sorted_points)),
+                "section": p_load.get("section") or "",
+                "char_length": len(c_text),
+                "text": c_text
+            })
+
+        # Reconstruct full text
+        full_text = "\n\n".join([c["text"] for c in chunks if c["text"]])
+
+        return {
+            "found": True,
+            "metadata": {
+                "doc_id": doc_id_canonical,
+                "title": doc_title,
+                "category": category,
+                "doc_number": doc_num,
+                "gr_no": first_payload.get("gr_no", ""),
+                "year": year,
+                "date": date,
+                "ponente": ponente,
+                "source_url": src_url,
+                "summary": summary,
+                "key_provisions": key_provisions,
+                "tags": tags,
+                "keywords": keywords,
+                "total_chunks": len(chunks),
+                "total_characters": len(full_text),
+                "total_words": len(full_text.split())
+            },
+            "full_text": full_text,
+            "chunks": chunks
         }
 
     def delete_document_from_qdrant(self, doc_id: str = "", doc_number: str = "", source_url: str = "") -> Dict[str, Any]:

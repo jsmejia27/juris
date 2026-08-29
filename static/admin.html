@@ -490,6 +490,109 @@
         </div>
     </div>
 
+    <!-- Entire Document Record Inspector Modal -->
+    <div id="documentRecordModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div class="bg-[#0E1424] border border-slate-700/90 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            <!-- Modal Header -->
+            <div class="p-5 sm:p-6 border-b border-slate-800 bg-slate-950/60 flex items-start justify-between gap-4 shrink-0">
+                <div class="space-y-1.5 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span id="recModalCategoryBadge" class="px-2.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold uppercase tracking-wider">Statute</span>
+                        <span id="recModalDocNumberBadge" class="px-2.5 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/40 text-blue-300 text-[11px] font-mono font-bold">RA 12254</span>
+                        <span id="recModalYearBadge" class="text-xs font-mono text-slate-400">Year: 2026</span>
+                    </div>
+                    <h3 id="recModalTitle" class="text-base sm:text-lg font-bold text-white leading-snug line-clamp-2">Document Title</h3>
+                    <div id="recModalSourceUrl" class="text-xs text-slate-400 font-mono truncate max-w-xl"></div>
+                </div>
+                <button onclick="closeDocumentRecordModal()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition shrink-0">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="px-6 py-2.5 bg-slate-900/50 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-300 shrink-0">
+                <div class="flex items-center gap-4">
+                    <span><strong class="text-emerald-400" id="recModalChunksCount">0</strong> chunks</span>
+                    <span>&bull;</span>
+                    <span><strong class="text-amber-400" id="recModalWordsCount">0</strong> words</span>
+                    <span>&bull;</span>
+                    <span><strong class="text-blue-400" id="recModalCharsCount">0</strong> chars</span>
+                </div>
+                <div id="recModalPonenteSection" class="hidden text-slate-400">
+                    <span>Ponente: <strong class="text-slate-200" id="recModalPonente"></strong></span>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="px-6 pt-3 border-b border-slate-800 bg-slate-950/30 flex items-center gap-2 shrink-0">
+                <button onclick="switchRecordTab('fulltext')" id="recTabBtn-fulltext" class="px-4 py-2 text-xs font-semibold rounded-t-xl transition flex items-center gap-1.5 border-b-2 border-amber-500 text-amber-400 bg-slate-900/80">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                    <span>Full Document Text</span>
+                </button>
+                <button onclick="switchRecordTab('chunks')" id="recTabBtn-chunks" class="px-4 py-2 text-xs font-semibold rounded-t-xl transition flex items-center gap-1.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40">
+                    <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                    <span>Vector Chunks (<span id="recTabChunksCount">0</span>)</span>
+                </button>
+                <button onclick="switchRecordTab('metadata')" id="recTabBtn-metadata" class="px-4 py-2 text-xs font-semibold rounded-t-xl transition flex items-center gap-1.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40">
+                    <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                    <span>Raw Metadata</span>
+                </button>
+            </div>
+
+            <!-- Tab Content (Scrollable) -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll">
+                <!-- Tab 1: Full Reconstructed Text -->
+                <div id="recTabContent-fulltext" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-mono text-slate-400">Complete text reconstructed from vector points</span>
+                        <button onclick="copyFullRecordText()" id="copyFullTextBtn" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-200 hover:text-white text-xs font-mono transition flex items-center gap-1.5 shadow-xs">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span id="copyFullTextBtnText">Copy Full Text</span>
+                        </button>
+                    </div>
+                    <div id="recModalFullTextContent" class="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-slate-800 text-slate-200 text-xs font-mono leading-relaxed whitespace-pre-wrap select-text max-h-[50vh] overflow-y-auto custom-scroll"></div>
+                </div>
+
+                <!-- Tab 2: Vector Chunks Breakdown -->
+                <div id="recTabContent-chunks" class="hidden space-y-3">
+                    <div class="text-xs font-mono text-slate-400">Indexed chunks in Qdrant (300–800 tokens each with metadata)</div>
+                    <div id="recModalChunksList" class="space-y-3 max-h-[50vh] overflow-y-auto custom-scroll"></div>
+                </div>
+
+                <!-- Tab 3: Raw Metadata JSON -->
+                <div id="recTabContent-metadata" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-mono text-slate-400">JSON schema stored in vector payloads</span>
+                        <button onclick="copyRecordMetadataJson()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-200 hover:text-white text-xs font-mono transition flex items-center gap-1.5 shadow-xs">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Copy JSON</span>
+                        </button>
+                    </div>
+                    <pre id="recModalMetadataJson" class="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 text-amber-300 text-xs font-mono overflow-x-auto select-text max-h-[50vh] custom-scroll"></pre>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 sm:p-5 border-t border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div id="recModalExternalLinkContainer">
+                    <a id="recModalExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white text-xs font-mono transition flex items-center gap-1.5">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Open Source URL</span>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="purgeDocumentFromModal()" class="px-4 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 hover:text-rose-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+                        <span>Purge from Corpus</span>
+                    </button>
+                    <button onclick="closeDocumentRecordModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 2FA Authentication Overlay Modal -->
     <div id="admin2FAModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-[#0E1424] border border-amber-500/30 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6">
@@ -1169,22 +1272,29 @@
                         </div>
                         <div class="space-y-2 divide-y divide-amber-500/20 pt-1">
                             ${data.existing_records.map(rec => `
-                                <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                                    <div>
+                                <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div class="min-w-0 flex-1">
                                         <div class="font-bold text-white font-sans text-sm">${escapeHtml(rec.title)}</div>
-                                        <div class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
+                                        <div class="text-[11px] text-slate-300 flex flex-wrap items-center gap-2 mt-0.5">
                                             <span><strong>Doc:</strong> ${escapeHtml(rec.doc_number || 'N/A')}</span>
                                             <span>&bull;</span>
                                             <span><strong>Category:</strong> ${escapeHtml(rec.category || 'N/A')}</span>
                                             <span>&bull;</span>
                                             <span class="text-emerald-400 font-bold">${rec.chunks_count || 'N/A'} chunks</span>
+                                            ${rec.year ? `<span>&bull;</span><span>${escapeHtml(rec.year)}</span>` : ''}
                                         </div>
                                         ${rec.source_url ? `<div class="text-[10px] text-slate-400 truncate max-w-md mt-0.5">${escapeHtml(rec.source_url)}</div>` : ''}
                                     </div>
-                                    <button onclick="deleteDocumentFromCorpus('${rec.doc_id || ''}', '${rec.doc_number || ''}', '${rec.source_url || ''}', '${escapeHtml(rec.title || '')}')" class="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-300 text-[11px] rounded-lg transition flex items-center gap-1 shrink-0">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
-                                        <span>Purge Record</span>
-                                    </button>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button onclick="viewEntireRecord('${rec.doc_id || ''}', '${rec.doc_number || ''}', '${rec.source_url || ''}', '${escapeHtml(rec.title || '')}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white text-[11px] rounded-lg transition flex items-center gap-1.5 shadow-xs">
+                                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-400"></i>
+                                            <span>View Entire Record</span>
+                                        </button>
+                                        <button onclick="deleteDocumentFromCorpus('${rec.doc_id || ''}', '${rec.doc_number || ''}', '${rec.source_url || ''}', '${escapeHtml(rec.title || '')}')" class="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-300 text-[11px] rounded-lg transition flex items-center gap-1">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+                                            <span>Purge</span>
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1243,14 +1353,19 @@
                             </div>
                             <div class="space-y-1.5 divide-y divide-slate-800">
                                 ${(c.documents || []).map(doc => `
-                                    <div class="pt-1.5 flex items-center justify-between text-[11px]">
+                                    <div class="pt-1.5 flex items-center justify-between text-[11px] gap-2">
                                         <div class="truncate max-w-lg">
                                             <span class="text-white">${escapeHtml(doc.title || 'Untitled')}</span>
                                             <span class="text-slate-500 ml-1">(${escapeHtml(doc.ingested_at || '')})</span>
                                         </div>
-                                        <button onclick="deleteDocumentFromCorpus('${doc.doc_id || ''}', '${doc.doc_number || ''}', '${doc.source_url || ''}', '${escapeHtml(doc.title || '')}')" class="text-rose-400 hover:text-rose-300 text-[10px] underline ml-2 shrink-0">
-                                            Purge
-                                        </button>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <button onclick="viewEntireRecord('${doc.doc_id || ''}', '${doc.doc_number || ''}', '${doc.source_url || ''}', '${escapeHtml(doc.title || '')}')" class="text-amber-400 hover:text-amber-300 text-[10px] underline">
+                                                View
+                                            </button>
+                                            <button onclick="deleteDocumentFromCorpus('${doc.doc_id || ''}', '${doc.doc_number || ''}', '${doc.source_url || ''}', '${escapeHtml(doc.title || '')}')" class="text-rose-400 hover:text-rose-300 text-[10px] underline">
+                                                Purge
+                                            </button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1264,6 +1379,172 @@
                 btn.innerHTML = `<i data-lucide="scan-search" class="w-4 h-4 text-amber-400"></i><span>Scan Corpus for Duplicates</span>`;
                 lucide.createIcons();
             }
+        }
+
+        let currentLoadedRecord = null;
+
+        async function viewEntireRecord(docId, docNumber, sourceUrl, title) {
+            const modal = document.getElementById('documentRecordModal');
+            if (!modal) return;
+
+            // Reset modal state
+            document.getElementById('recModalTitle').innerText = title || docNumber || "Loading Document...";
+            document.getElementById('recModalCategoryBadge').innerText = "Loading...";
+            document.getElementById('recModalDocNumberBadge').innerText = docNumber || "N/A";
+            document.getElementById('recModalYearBadge').innerText = "";
+            document.getElementById('recModalSourceUrl').innerText = sourceUrl || "";
+            document.getElementById('recModalChunksCount').innerText = "-";
+            document.getElementById('recModalWordsCount').innerText = "-";
+            document.getElementById('recModalCharsCount').innerText = "-";
+            document.getElementById('recTabChunksCount').innerText = "0";
+            document.getElementById('recModalFullTextContent').innerHTML = `<div class="p-8 text-center text-slate-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-amber-400"></i><span>Retrieving vector chunks and reconstructing full document from Qdrant...</span></div>`;
+            document.getElementById('recModalChunksList').innerHTML = "";
+            document.getElementById('recModalMetadataJson').innerText = "";
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/manage/ingest/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_id: docId || null,
+                        doc_number: docNumber || null,
+                        source_url: sourceUrl || null,
+                        title: title || null
+                    })
+                });
+
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                const data = await res.json();
+
+                if (!data.found) {
+                    document.getElementById('recModalFullTextContent').innerHTML = `<div class="p-6 text-center text-rose-400 font-mono">\u26a0\ufe0f ${escapeHtml(data.message || "Document not found in knowledge base.")}</div>`;
+                    return;
+                }
+
+                currentLoadedRecord = data;
+                const meta = data.metadata || {};
+
+                document.getElementById('recModalTitle').innerText = meta.title || "Philippine Legal Document";
+                document.getElementById('recModalCategoryBadge').innerText = meta.category || "Statute";
+                document.getElementById('recModalDocNumberBadge').innerText = meta.doc_number || meta.gr_no || "N/A";
+                document.getElementById('recModalYearBadge').innerText = meta.year ? `Year: ${meta.year}` : (meta.date ? `Date: ${meta.date}` : "");
+                document.getElementById('recModalSourceUrl').innerText = meta.source_url || "";
+                
+                document.getElementById('recModalChunksCount').innerText = meta.total_chunks || (data.chunks ? data.chunks.length : 0);
+                document.getElementById('recModalWordsCount').innerText = meta.total_words ? Number(meta.total_words).toLocaleString() : 0;
+                document.getElementById('recModalCharsCount').innerText = meta.total_characters ? Number(meta.total_characters).toLocaleString() : 0;
+                document.getElementById('recTabChunksCount').innerText = data.chunks ? data.chunks.length : 0;
+
+                // Ponente
+                const ponenteSec = document.getElementById('recModalPonenteSection');
+                if (meta.ponente && meta.ponente.trim()) {
+                    document.getElementById('recModalPonente').innerText = meta.ponente.trim();
+                    ponenteSec.classList.remove('hidden');
+                } else {
+                    ponenteSec.classList.add('hidden');
+                }
+
+                // External Link
+                const extLink = document.getElementById('recModalExternalLink');
+                if (meta.source_url && meta.source_url.startsWith('http')) {
+                    extLink.href = meta.source_url;
+                    extLink.parentElement.classList.remove('hidden');
+                } else {
+                    extLink.parentElement.classList.add('hidden');
+                }
+
+                // Full text
+                document.getElementById('recModalFullTextContent').innerText = data.full_text || "No text available.";
+
+                // Chunks list
+                const chunksList = document.getElementById('recModalChunksList');
+                if (data.chunks && data.chunks.length > 0) {
+                    chunksList.innerHTML = data.chunks.map((c, i) => `
+                        <div class="p-4 bg-slate-950/90 border border-slate-800 rounded-2xl space-y-2 text-xs font-mono">
+                            <div class="flex items-center justify-between text-slate-400 text-[11px] pb-1 border-b border-slate-800/80">
+                                <span class="text-amber-400 font-bold">Chunk ${c.chunk_index} of ${c.total_chunks} ${c.section ? `&bull; <span class="text-slate-300">${escapeHtml(c.section)}</span>` : ''}</span>
+                                <div class="flex items-center gap-2">
+                                    <span>${c.char_length} chars</span>
+                                    <button onclick="copyChunkText(${i})" class="text-amber-400 hover:text-amber-300 underline text-[10px]">Copy</button>
+                                </div>
+                            </div>
+                            <div class="text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed select-text">${escapeHtml(c.text)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    chunksList.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs">No vector chunks available.</div>`;
+                }
+
+                // Metadata JSON
+                document.getElementById('recModalMetadataJson').innerText = JSON.stringify(meta, null, 2);
+
+                switchRecordTab('fulltext');
+                lucide.createIcons();
+            } catch (err) {
+                document.getElementById('recModalFullTextContent').innerHTML = `<div class="p-6 text-center text-rose-400 font-mono">\u274c Error loading record: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function closeDocumentRecordModal() {
+            const modal = document.getElementById('documentRecordModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            currentLoadedRecord = null;
+        }
+
+        function switchRecordTab(tabName) {
+            ['fulltext', 'chunks', 'metadata'].forEach(t => {
+                const btn = document.getElementById(`recTabBtn-${t}`);
+                const content = document.getElementById(`recTabContent-${t}`);
+                if (btn && content) {
+                    if (t === tabName) {
+                        btn.className = "px-4 py-2 text-xs font-semibold rounded-t-xl transition flex items-center gap-1.5 border-b-2 border-amber-500 text-amber-400 bg-slate-900/80";
+                        content.classList.remove('hidden');
+                    } else {
+                        btn.className = "px-4 py-2 text-xs font-semibold rounded-t-xl transition flex items-center gap-1.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40";
+                        content.classList.add('hidden');
+                    }
+                }
+            });
+            lucide.createIcons();
+        }
+
+        function copyFullRecordText() {
+            if (!currentLoadedRecord || !currentLoadedRecord.full_text) return;
+            navigator.clipboard.writeText(currentLoadedRecord.full_text).then(() => {
+                const btnText = document.getElementById('copyFullTextBtnText');
+                if (btnText) {
+                    btnText.innerText = "Copied \u2713";
+                    setTimeout(() => { btnText.innerText = "Copy Full Text"; }, 2000);
+                }
+            });
+        }
+
+        function copyRecordMetadataJson() {
+            if (!currentLoadedRecord || !currentLoadedRecord.metadata) return;
+            navigator.clipboard.writeText(JSON.stringify(currentLoadedRecord.metadata, null, 2)).then(() => {
+                alert("\u2705 Metadata JSON copied to clipboard.");
+            });
+        }
+
+        function copyChunkText(index) {
+            if (!currentLoadedRecord || !currentLoadedRecord.chunks || !currentLoadedRecord.chunks[index]) return;
+            navigator.clipboard.writeText(currentLoadedRecord.chunks[index].text).then(() => {
+                alert(`\u2705 Chunk ${index + 1} copied to clipboard.`);
+            });
+        }
+
+        async function purgeDocumentFromModal() {
+            if (!currentLoadedRecord || !currentLoadedRecord.metadata) return;
+            const meta = currentLoadedRecord.metadata;
+            closeDocumentRecordModal();
+            await deleteDocumentFromCorpus(meta.doc_id, meta.doc_number, meta.source_url, meta.title);
         }
 
         async function deleteDocumentFromCorpus(docId, docNumber, sourceUrl, title) {
@@ -1327,9 +1608,14 @@
                         <td class="p-3 text-emerald-400 font-bold">${item.chunks_count} chunks</td>
                         <td class="p-3 text-slate-400 text-[11px]">${escapeHtml(item.ingested_at || '')}</td>
                         <td class="p-3 text-right">
-                            <button onclick="deleteDocumentFromCorpus('${item.doc_id || ''}', '${item.doc_number || ''}', '${item.source_url || ''}', '${escapeHtml(item.title || '')}')" class="px-2.5 py-1 bg-rose-950/70 hover:bg-rose-900 border border-rose-800/50 text-rose-300 text-[10px] rounded-lg transition" title="Purge from Qdrant">
-                                Purge
-                            </button>
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button onclick="viewEntireRecord('${item.doc_id || ''}', '${item.doc_number || ''}', '${item.source_url || ''}', '${escapeHtml(item.title || '')}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-[10px] rounded-lg transition" title="View Entire Record">
+                                    View
+                                </button>
+                                <button onclick="deleteDocumentFromCorpus('${item.doc_id || ''}', '${item.doc_number || ''}', '${item.source_url || ''}', '${escapeHtml(item.title || '')}')" class="px-2.5 py-1 bg-rose-950/70 hover:bg-rose-900 border border-rose-800/50 text-rose-300 text-[10px] rounded-lg transition" title="Purge from Qdrant">
+                                    Purge
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');

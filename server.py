@@ -756,6 +756,12 @@ class IngestDeleteRequest(BaseModel):
     doc_number: Optional[str] = ""
     source_url: Optional[str] = ""
 
+class IngestRecordRequest(BaseModel):
+    doc_id: Optional[str] = ""
+    doc_number: Optional[str] = ""
+    source_url: Optional[str] = ""
+    title: Optional[str] = ""
+
 @app.post("/api/manage/ingest/preview-url")
 async def preview_ingest_url(req: IngestPreviewUrlRequest, auth: str = Depends(verify_admin)):
     try:
@@ -807,6 +813,22 @@ async def get_all_duplicates(auth: str = Depends(verify_admin)):
         return {"clusters": clusters, "total_clusters": len(clusters)}
     except Exception as e:
         logger.error(f"Error scanning duplicates: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/manage/ingest/record")
+async def get_document_record(req: IngestRecordRequest, auth: str = Depends(verify_admin)):
+    try:
+        from legal_ingestion_service import LegalIngestionService
+        service = LegalIngestionService()
+        res = service.get_full_document_record(
+            doc_id=req.doc_id or "",
+            doc_number=req.doc_number or "",
+            source_url=req.source_url or "",
+            title=req.title or ""
+        )
+        return res
+    except Exception as e:
+        logger.error(f"Error in get_document_record: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/manage/ingest/delete")
