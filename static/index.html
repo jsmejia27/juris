@@ -387,12 +387,12 @@
                 <div class="flex items-center gap-2">
                     <span class="text-[10px] text-slate-400 hidden sm:inline">Click badge to inspect text</span>
                     <button type="button" onclick="toggleSourcesDrawerCollapse()" id="toggleAuthoritiesBtn" class="px-2 py-0.5 bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-md text-[10px] font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
-                        <span id="toggleAuthoritiesText">Hide</span>
-                        <i id="toggleAuthoritiesIcon" data-lucide="chevron-up" class="w-3 h-3 text-slate-500"></i>
+                        <span id="toggleAuthoritiesText">Show</span>
+                        <i id="toggleAuthoritiesIcon" data-lucide="chevron-down" class="w-3 h-3 text-slate-500"></i>
                     </button>
                 </div>
             </div>
-            <div id="sourceChips" class="flex flex-wrap gap-1.5 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll"></div>
+            <div id="sourceChips" class="hidden flex-wrap gap-1.5 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll"></div>
         </div>
 
         <!-- Fixed Bottom Input Area -->
@@ -878,32 +878,7 @@
                                 ${chips}
                             </div>
                         </div>
-                    `;
-                }
-
-                // If on Tab 1 and Executive Digest has not yet been generated, show optional Generate Executive Digest banner
-                if (turnIdx !== null && (!turn.tab2Status || turn.tab2Status === 'unrequested') && !turn.tab2Response) {
-                    const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
-                    if (!isCooling) {
-                        html += `
-                            <div class="mt-4 p-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-slate-50 border border-amber-300/70 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
-                                        <i data-lucide="sparkles" class="w-4 h-4 text-gold"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-bold text-slate-900">Executive Editorial Digest (Optional)</div>
-                                        <div class="text-[11px] text-slate-600">Synthesize the core legal holdings & strategic compliance takeaways.</div>
-                                    </div>
-                                </div>
-                                <button onclick="requestExecutiveDigest(${turnIdx})" class="w-full sm:w-auto px-4 py-2 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-xs flex items-center justify-center gap-1.5 shrink-0">
-                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"></i>
-                                    <span>Generate Executive Digest</span>
-                                </button>
-                            </div>
-                        `;
-                    }
-                }
+                                    // Executive Digest banner removed to maintain 100% focus on In-Depth Treatise
             } else if (activeTab === 2) {
                 if (turn.tab2Status === 'generating') {
                     const partialDigest = turn.tab2Response ? DOMPurify.sanitize(marked.parse(turn.tab2Response)) : "";
@@ -921,68 +896,42 @@
                     const styledHtml = enhanceBlockquotes(rawParsed);
                     const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
                     html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
-                } else {
-                    // Unrequested: Check cooldown state
-                    const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
-                    if (isCooling) {
-                        html += `
-                            <div class="p-5 sm:p-6 bg-amber-50/80 border border-amber-200/90 rounded-2xl text-center space-y-3 shadow-xs">
-                                <div class="w-10 h-10 mx-auto rounded-full bg-amber-100 border border-amber-300/70 flex items-center justify-center text-amber-700">
-                                    <i data-lucide="timer" class="w-5 h-5"></i>
-                                </div>
-                                <div class="space-y-1">
-                                    <h4 class="font-bold text-amber-950 text-sm">Cooldown Period Active</h4>
-                                    <p class="text-xs text-amber-800 leading-relaxed max-w-md mx-auto">
-                                        To maintain optimal hardware throughput, you can generate the optional Executive Editorial Digest once the cooldown timer completes.
-                                    </p>
-                                </div>
-                                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-200/80 border border-amber-300/90 text-amber-950 text-xs font-mono font-bold">
-                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                                    <span id="digest-cooldown-timer-${turnIdx}">Available in ${cooldownSecondsRemaining}s</span>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        html += `
-                            <div class="p-5 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-3.5 shadow-xs">
-                                <div class="w-10 h-10 mx-auto rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700">
-                                    <i data-lucide="file-text" class="w-5 h-5"></i>
-                                </div>
-                                <div class="space-y-1">
-                                    <h4 class="font-bold text-slate-900 text-sm">Executive Editorial Digest (Optional)</h4>
-                                    <p class="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
-                                        Generate a condensed executive summary, core statutory citations, and strategic compliance takeaways for this inquiry.
-                                    </p>
-                                </div>
-                                <button onclick="requestExecutiveDigest(${turnIdx})" class="px-5 py-2.5 bg-midnight hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 shadow-md flex items-center gap-2 mx-auto">
-                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"></i>
-                                    <span>Generate Executive Digest</span>
-                                </button>
-                            </div>
-                        `;
-                    }
                 }
             }
 
             // 4. Response Tabs & Action Toolbar (Tabs placed above copy and download PDF button)
             if (turnIdx !== null) {
+                const hasDigest = turn.tab2Response || turn.tab2Status === 'generating' || turn.tab2Status === 'ready';
                 html += `
                     <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-                        <!-- Dual Response Format Selection Tabs -->
-                        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 w-full sm:w-auto">
-                            <button onclick="switchTurnTab(${turnIdx}, 1)" id="tab1-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 1 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
-                                <i data-lucide="scroll" class="w-3.5 h-3.5 shrink-0 ${activeTab === 1 ? 'text-amber-600' : 'text-slate-400'}"></i>
-                                <span>📜 In-Depth Treatise</span>
-                            </button>
-                            <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
-                                <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
-                                <span>📋 Executive Digest</span>
-                                ${turn.tab2Status === 'generating' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ((!turn.tab2Status || turn.tab2Status === 'unrequested') ? '<span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 text-[9px] font-bold rounded-md uppercase tracking-wider">Optional</span>' : '')}
-                            </button>
+                        <!-- Response Format Indicator / Tabs -->
+                        <div class="flex items-center ${hasDigest ? 'bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1' : 'gap-2'} w-full sm:w-auto">
+                            ${hasDigest ? `
+                                <button onclick="switchTurnTab(${turnIdx}, 1)" id="tab1-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 1 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                    <i data-lucide="scroll" class="w-3.5 h-3.5 shrink-0 ${activeTab === 1 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                                    <span>📜 In-Depth Treatise</span>
+                                </button>
+                                <button onclick="switchTurnTab(${turnIdx}, 2)" id="tab2-btn-${turnIdx}" class="flex-1 sm:flex-none text-center justify-center text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2 ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'text-slate-500 hover:text-slate-800'}">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0 ${activeTab === 2 ? 'text-amber-600' : 'text-slate-400'}"></i>
+                                    <span>📋 Executive Digest</span>
+                                    ${turn.tab2Status === 'generating' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>' : ''}
+                                </button>
+                            ` : `
+                                <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                                    <i data-lucide="scroll" class="w-4 h-4 text-amber-600"></i>
+                                    <span>📜 In-Depth Legal Treatise</span>
+                                </div>
+                            `}
                         </div>
 
                         <!-- Action Buttons: Copy & Download PDF (Bound to Active Tab) -->
                         <div class="flex items-center gap-2 w-full sm:w-auto">
+                            ${!hasDigest ? `
+                                <button onclick="requestExecutiveDigest(${turnIdx})" title="Optionally generate executive summary" class="flex-1 sm:flex-none justify-center px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-xs font-medium shadow-2xs">
+                                    <i data-lucide="sparkles" class="w-3 h-3 text-gold"></i>
+                                    <span>Executive Digest</span>
+                                </button>
+                            ` : ''}
                             <button onclick="copyTurnResponse(${turnIdx})" class="flex-1 sm:flex-none justify-center px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 text-xs font-medium shadow-2xs">
                                 <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
                                 <span id="copy-btn-text-${turnIdx}">Copy (${activeTab === 1 ? 'Treatise' : 'Digest'})</span>
@@ -1331,7 +1280,7 @@
             return unique;
         }
 
-        let isAuthoritiesCollapsed = false;
+        let isAuthoritiesCollapsed = true;
 
         function toggleSourcesDrawerCollapse() {
             isAuthoritiesCollapsed = !isAuthoritiesCollapsed;
