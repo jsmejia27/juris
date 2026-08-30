@@ -843,9 +843,10 @@
                 const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
                 html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
 
-                // Render Dynamic Contextual Follow-Up Prompts
+                // Render Dynamic Contextual Follow-Up Prompts (Autohidden / Collapsed by Default)
                 if (suggestedInquiries.length > 0) {
                     const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
+                    const showInquiries = turn && turn.showSuggestedInquiries === true;
                     const chips = suggestedInquiries.map(q => {
                         const safeQ = escapeHtml(q).replace(/'/g, "\\'");
                         return `
@@ -857,12 +858,15 @@
                     }).join('');
 
                     html += `
-                        <div class="mt-4 pt-3.5 border-t border-slate-100">
-                            <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold text-amber-900 mb-2">
-                                <i data-lucide="compass" class="w-3.5 h-3.5 text-gold shrink-0"></i>
-                                <span>Suggested Next Inquiries (Click to ask):</span>
+                        <div class="mt-4 pt-3 border-t border-slate-100">
+                            <div class="flex items-center justify-between">
+                                <button type="button" onclick="toggleSuggestedInquiries(${turnIdx})" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition shadow-2xs active:scale-95 cursor-pointer">
+                                    <i data-lucide="compass" class="w-3.5 h-3.5 text-gold shrink-0"></i>
+                                    <span>Suggested Next Inquiries (${suggestedInquiries.length})</span>
+                                    <i data-lucide="${showInquiries ? 'chevron-up' : 'chevron-down'}" class="w-3 h-3 text-slate-400 ml-0.5"></i>
+                                </button>
                             </div>
-                            <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+                            <div id="suggested-inquiries-${turnIdx}" class="${showInquiries ? 'flex' : 'hidden'} flex-col sm:flex-row flex-wrap gap-2 mt-2.5">
                                 ${chips}
                             </div>
                         </div>
@@ -1029,6 +1033,16 @@
                 lucide.createIcons();
                 // Execute cooldown again after Executive Digest completion
                 startChatCooldownTimer(60);
+            }
+        }
+
+        function toggleSuggestedInquiries(turnIdx) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn) return;
+            turn.showSuggestedInquiries = !turn.showSuggestedInquiries;
+            const card = document.getElementById(`assistant-card-${turnIdx}`);
+            if (card) {
+                renderStreamingOutput(card, turn.thought, turn, turnIdx);
             }
         }
 
