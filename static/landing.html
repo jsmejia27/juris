@@ -398,26 +398,26 @@
                             <div class="w-7 h-7 rounded-lg overflow-hidden shrink-0 bg-slate-900 flex items-center justify-center border border-slate-700">
                                 <img src="/static/juris.png" alt="Juris" class="w-full h-full object-cover" />
                             </div>
-                            <p class="text-sm sm:text-base font-semibold text-slate-900">
-                                Hi, I'm Juris. What do you want to know?
+                            <p class="text-sm sm:text-base font-semibold text-slate-900 inline-flex items-center flex-wrap">
+                                <span>Hi, I'm Juris.&nbsp;</span><span id="typewriterGreeting"></span><span id="typewriterCursor" class="inline-block w-1.5 h-4 bg-slate-900 ml-0.5 animate-pulse"></span>
                             </p>
                         </div>
 
-                        <div class="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
-                            <span class="text-slate-400 font-mono text-[11px]">Samples:</span>
-                            <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" class="hover:text-amber-800 hover:underline transition">
+                        <div id="sampleSuggestionsContainer" class="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                            <span class="sample-item text-slate-400 font-mono text-[11px] opacity-0 translate-y-1 transition-all duration-300">Samples:</span>
+                            <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" class="sample-item hover:text-amber-800 hover:underline transition opacity-0 translate-y-1 transition-all duration-300">
                                 Solo Parents Act (RA 11861)
                             </button>
-                            <span class="text-slate-300">•</span>
-                            <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" class="hover:text-amber-800 hover:underline transition">
+                            <span class="sample-item text-slate-300 opacity-0 translate-y-1 transition-all duration-300">•</span>
+                            <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" class="sample-item hover:text-amber-800 hover:underline transition opacity-0 translate-y-1 transition-all duration-300">
                                 Psychological Incapacity (Tan-Andal)
                             </button>
-                            <span class="text-slate-300">•</span>
-                            <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" class="hover:text-amber-800 hover:underline transition">
+                            <span class="sample-item text-slate-300 opacity-0 translate-y-1 transition-all duration-300">•</span>
+                            <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" class="sample-item hover:text-amber-800 hover:underline transition opacity-0 translate-y-1 transition-all duration-300">
                                 Cybercrime Online Libel
                             </button>
-                            <span class="text-slate-300">•</span>
-                            <button onclick="sendQuickPrompt('What acts constitute economic abuse under Section 5(i) of RA 9262?')" class="hover:text-amber-800 hover:underline transition">
+                            <span class="sample-item text-slate-300 opacity-0 translate-y-1 transition-all duration-300">•</span>
+                            <button onclick="sendQuickPrompt('What acts constitute economic abuse under Section 5(i) of RA 9262?')" class="sample-item hover:text-amber-800 hover:underline transition opacity-0 translate-y-1 transition-all duration-300">
                                 VAWC Economic Abuse (RA 9262)
                             </button>
                         </div>
@@ -1616,14 +1616,54 @@
             return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
+        let typewriterStarted = false;
+        function playGreetingAnimation() {
+            if (typewriterStarted) return;
+            typewriterStarted = true;
+
+            const textEl = document.getElementById('typewriterGreeting');
+            const cursorEl = document.getElementById('typewriterCursor');
+            const items = document.querySelectorAll('.sample-item');
+            if (!textEl) return;
+
+            const fullText = "What do you want to know?";
+            let index = 0;
+            textEl.textContent = "";
+
+            function typeChar() {
+                if (index < fullText.length) {
+                    textEl.textContent += fullText.charAt(index);
+                    index++;
+                    setTimeout(typeChar, 35);
+                } else {
+                    setTimeout(() => {
+                        if (cursorEl) cursorEl.style.display = 'none';
+                    }, 1000);
+
+                    items.forEach((item, idx) => {
+                        setTimeout(() => {
+                            item.classList.remove('opacity-0', 'translate-y-1');
+                            item.classList.add('opacity-100', 'translate-y-0');
+                        }, (idx + 1) * 110);
+                    });
+                }
+            }
+
+            setTimeout(typeChar, 250);
+        }
+
         function initWelcomeSplash() {
             const splash = document.getElementById('welcomeSplashModal');
-            if (!splash) return;
+            if (!splash) {
+                playGreetingAnimation();
+                return;
+            }
             const acknowledged = sessionStorage.getItem('juris_welcome_splash_accepted');
             if (acknowledged === 'true') {
                 splash.classList.add('hidden');
                 splash.classList.remove('flex');
                 document.body.classList.remove('splash-active');
+                playGreetingAnimation();
             } else {
                 openWelcomeSplash();
             }
@@ -1658,11 +1698,13 @@
                     splash.classList.remove('flex');
                     const input = document.getElementById('chatInput');
                     if (input) input.focus();
+                    playGreetingAnimation();
                 }, 280);
             } else if (splash) {
                 splash.classList.add('hidden');
                 splash.classList.remove('flex');
                 document.body.classList.remove('splash-active');
+                playGreetingAnimation();
             }
             sessionStorage.setItem('juris_welcome_splash_accepted', 'true');
             localStorage.setItem('juris_welcome_splash_accepted', 'true');
