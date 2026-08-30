@@ -427,6 +427,106 @@
         </div>
     </div>
 
+    <!-- Welcome Legal Disclaimer Splash Screen Modal -->
+    <div id="welcomeSplashModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md items-center justify-center p-3 sm:p-6 transition-all duration-300">
+        <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border border-amber-500/30 rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl shadow-black/80 flex flex-col relative">
+            
+            <!-- Subtle Gold Accent Header Stripe -->
+            <div class="h-1.5 w-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600"></div>
+
+            <div class="p-5 sm:p-7 space-y-4 sm:space-y-5 overflow-y-auto max-h-[85vh] custom-scroll">
+                
+                <!-- Brand Emblem & Title Header -->
+                <div class="flex flex-col items-center text-center space-y-2.5">
+                    <div class="relative group">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl shadow-amber-500/10 border-2 border-amber-400/40 bg-slate-950 p-0.5 flex items-center justify-center">
+                            <img src="/static/juris.png" alt="Juris Logo" class="w-full h-full object-cover rounded-xl" />
+                        </div>
+                        <div class="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 p-1 rounded-full shadow-md">
+                            <i data-lucide="scale" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] sm:text-xs font-mono font-semibold uppercase tracking-wider">
+                            <i data-lucide="shield-check" class="w-3 h-3 text-gold"></i>
+                            <span>Institutional Notice &amp; Terms</span>
+                        </div>
+                        <h2 class="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight pt-0.5">
+                            Welcome to <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200">Juris</span>
+                        </h2>
+                        <p class="text-slate-400 text-xs font-sans max-w-sm">
+                            Sovereign Philippine Legal AI &amp; Research Intelligence System
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Highlighted Disclaimer Callouts -->
+                <div class="space-y-2.5 pt-1">
+                    
+                    <!-- 1. Education & Research Only -->
+                    <div class="p-3 sm:p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/80 flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-400/20">
+                            <i data-lucide="graduation-cap" class="w-4 h-4 text-gold"></i>
+                        </div>
+                        <div class="space-y-0.5 text-left">
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-100">
+                                Academic &amp; Research Use Only
+                            </h4>
+                            <p class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                                Juris is an automated retrieval tool created exclusively for <strong>educational, academic reference, and preliminary legal research</strong>. It is not a law office.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 2. No Attorney-Client Relationship -->
+                    <div class="p-3 sm:p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/80 flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-400/20">
+                            <i data-lucide="file-text" class="w-4 h-4 text-gold"></i>
+                        </div>
+                        <div class="space-y-0.5 text-left">
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-100">
+                                No Attorney-Client Relationship
+                            </h4>
+                            <p class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                                Querying Juris and reading generated syntheses does not establish an attorney-client relationship under the Code of Professional Responsibility and Accountability (CPRA).
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 3. Consult a Licensed Attorney (High-Priority Alert) -->
+                    <div class="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/50 flex items-start gap-3 shadow-inner">
+                        <div class="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 mt-0.5 font-bold shadow-xs">
+                            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        </div>
+                        <div class="space-y-0.5 text-left">
+                            <h4 class="text-xs sm:text-sm font-bold text-amber-300">
+                                Consult a Licensed Philippine Attorney
+                            </h4>
+                            <p class="text-[11px] sm:text-xs text-amber-100/90 leading-relaxed">
+                                If you require actionable legal advice, formal counsel, or legal representation in court, you must consult a licensed member of the <strong>Integrated Bar of the Philippines (IBP)</strong>.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Actions: Accept Button & Full Terms Link -->
+                <div class="pt-1 space-y-2.5 text-center">
+                    <button type="button" onclick="acceptWelcomeSplash()" class="w-full py-3 px-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-bold text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 hover:brightness-110 active:scale-[0.98] shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-lucide="check-circle" class="w-4 h-4 stroke-[2.5]"></i>
+                        <span>I Understand &amp; Agree • Enter Juris</span>
+                    </button>
+                    
+                    <div class="text-[11px] text-slate-400 font-mono">
+                        Read the full <a href="/disclaimer" target="_blank" class="text-amber-400 hover:text-amber-300 underline font-semibold transition">Legal Disclaimer &amp; Terms of Use</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <!-- Application Script -->
     <script>
         // Initialize Icons
@@ -1436,8 +1536,41 @@
             return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // Focus chat input on page load
+        function initWelcomeSplash() {
+            const splash = document.getElementById('welcomeSplashModal');
+            if (!splash) return;
+            const acknowledged = sessionStorage.getItem('juris_welcome_splash_accepted');
+            if (acknowledged === 'true') {
+                splash.classList.add('hidden');
+                splash.classList.remove('flex');
+            } else {
+                splash.classList.remove('hidden');
+                splash.classList.add('flex');
+            }
+        }
+
+        function acceptWelcomeSplash() {
+            const splash = document.getElementById('welcomeSplashModal');
+            if (splash) {
+                splash.classList.add('hidden');
+                splash.classList.remove('flex');
+            }
+            sessionStorage.setItem('juris_welcome_splash_accepted', 'true');
+            localStorage.setItem('juris_welcome_splash_accepted', 'true');
+        }
+
+        function openWelcomeSplash() {
+            const splash = document.getElementById('welcomeSplashModal');
+            if (splash) {
+                splash.classList.remove('hidden');
+                splash.classList.add('flex');
+                lucide.createIcons();
+            }
+        }
+
+        // Focus chat input on page load and initialize splash modal
         window.addEventListener('DOMContentLoaded', () => {
+            initWelcomeSplash();
             const input = document.getElementById('chatInput');
             if (input) input.focus();
         });
