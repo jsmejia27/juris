@@ -330,47 +330,38 @@
     <!-- Main Workspace Container (Maximized Fullscreen) -->
     <div class="flex-1 flex flex-col max-w-5xl w-full mx-auto p-2 sm:p-5 overflow-hidden gap-2">
 
-        <!-- Top Suggested Quick Legal Prompts -->
-        <div class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1 shrink-0 text-xs font-mono">
-            <span class="text-slate-400 uppercase tracking-wider text-[10px] sm:text-[11px] font-semibold shrink-0 mr-1 flex items-center gap-1">
-                <i data-lucide="sparkles" class="w-3 h-3 text-gold"></i> Prompts:
-            </span>
-            <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" 
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition text-xs">
-                Solo Parents Act (RA 11861)
-            </button>
-            <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" 
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition text-xs">
-                Psychological Incapacity (Tan-Andal)
-            </button>
-            <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" 
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition text-xs">
-                Cybercrime Online Libel
-            </button>
-            <button onclick="sendQuickPrompt('What is the status of pending absolute divorce and dissolution of marriage bills in the 20th Congress?')" 
-                    class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg whitespace-nowrap shadow-2xs hover:border-gold transition text-xs">
-                20th Congress Divorce Bills
-            </button>
-        </div>
-
         <!-- Chat Messages Scroll Container -->
         <div id="messagesContainer" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-5 custom-scroll bg-white border border-hairline rounded-xl sm:rounded-2xl shadow-sm">
             
             <!-- Welcome Assistant Message Card -->
             <div class="flex flex-col items-start w-full">
-                <div class="bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs w-full text-slate-800 space-y-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-midnight flex items-center justify-center border border-slate-700">
+                <div class="p-3 sm:p-4 text-slate-800 space-y-3 w-full">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg overflow-hidden shrink-0 bg-midnight flex items-center justify-center border border-slate-700">
                             <img src="/static/juris.png" alt="Juris" class="w-full h-full object-cover" />
                         </div>
-                        <div>
-                            <h2 class="font-serif text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                                What do you want to know?
-                            </h2>
-                            <p class="text-subtext text-xs sm:text-sm">
-                                Ask any Philippine legal inquiry, statute reference, or case doctrine.
-                            </p>
-                        </div>
+                        <p class="text-sm sm:text-base font-semibold text-slate-900">
+                            Hi, I'm Juris. What do you want to know?
+                        </p>
+                    </div>
+                    
+                    <div class="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                        <span class="text-slate-400 font-mono text-[11px]">Samples:</span>
+                        <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" class="hover:text-amber-800 hover:underline transition">
+                            Solo Parents Act (RA 11861)
+                        </button>
+                        <span class="text-slate-300">•</span>
+                        <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" class="hover:text-amber-800 hover:underline transition">
+                            Psychological Incapacity (Tan-Andal)
+                        </button>
+                        <span class="text-slate-300">•</span>
+                        <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" class="hover:text-amber-800 hover:underline transition">
+                            Cybercrime Online Libel
+                        </button>
+                        <span class="text-slate-300">•</span>
+                        <button onclick="sendQuickPrompt('What acts constitute economic abuse under Section 5(i) of RA 9262?')" class="hover:text-amber-800 hover:underline transition">
+                            VAWC Economic Abuse (RA 9262)
+                        </button>
                     </div>
                 </div>
             </div>
