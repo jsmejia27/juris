@@ -232,175 +232,255 @@
             font-size: 0.76rem;
             line-height: 1.5;
             white-space: pre-wrap;
-            color: #475569;
+        /* Splash Blur & Transition Effects */
+        body.splash-active #mainContentWrapper {
+            filter: blur(12px) brightness(0.96);
+            pointer-events: none;
+            user-select: none;
+            transform: scale(0.995);
+        }
+
+        #mainContentWrapper {
+            filter: blur(0px) brightness(1);
+            transform: scale(1);
+            transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+        }
+
+        /* Modal Animation Keyframes */
+        @keyframes splashCardIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.92) translateY(14px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes splashCardOut {
+            0% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.94) translateY(-10px);
+            }
+        }
+
+        @keyframes splashBackdropIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes splashBackdropOut {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .animate-splash-in {
+            animation: splashBackdropIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-splash-card-in {
+            animation: splashCardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-splash-out {
+            animation: splashBackdropOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-splash-card-out {
+            animation: splashCardOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Subtle Glowing Halo on Juris Emblem */
+        @keyframes goldHaloPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(217, 119, 6, 0);
+            }
+        }
+
+        .juris-emblem-pulse {
+            animation: goldHaloPulse 3s infinite ease-in-out;
         }
     </style>
 </head>
 <body class="bg-[#f8fafc] text-bodytext flex flex-col h-[100dvh] min-h-[100dvh] overflow-hidden selection:bg-amber-100 selection:text-amber-900">
 
-    <!-- Top Judicial Header Bar -->
-    <header class="bg-midnight text-white border-b border-slate-800/90 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 shadow-md gap-2">
-        
-        <!-- Left: Brand & Seal -->
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-            <a href="/" class="flex items-center gap-2 group">
-                <img src="/static/juris.png" alt="Juris Logo" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
-                <div class="flex items-center gap-1.5">
-                    <span class="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">Juris</span>
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-                    <span class="hidden md:inline-block px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider bg-amber-400/10 text-amber-300 border border-amber-400/20 rounded-full">
-                        Philippine Legal AI
-                    </span>
-                </div>
-            </a>
-        </div>
+    <!-- Main Application Wrapper (Receives background blur when splash is active) -->
+    <div id="mainContentWrapper" class="flex flex-col h-full overflow-hidden">
 
-        <!-- Right Controls: Corpus Filter & Action Toolbar -->
-        <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-            <!-- Corpus Category Filter (Adaptive Width) -->
-            <div class="flex items-center gap-1 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 shadow-2xs">
-                <i data-lucide="filter" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
-                <select id="corpusCategoryFilter" class="bg-transparent text-slate-200 text-[11px] sm:text-xs font-mono outline-none cursor-pointer max-w-[110px] xs:max-w-[140px] sm:max-w-none">
-                    <option value="" class="bg-slate-900">All Philippine Law</option>
-                    <option value="Republic Act" class="bg-slate-900">Republic Acts (Statutes)</option>
-                    <option value="Jurisprudence" class="bg-slate-900">Supreme Court Cases</option>
-                    <option value="Executive & Administrative Issuances" class="bg-slate-900">Executive & Administrative Issuances</option>
-                </select>
-            </div>
-
-            <!-- Divider -->
-            <div class="h-4 w-px bg-slate-800 hidden xs:block"></div>
-
-            <!-- Action Toolbar Buttons -->
-            <div class="flex items-center gap-1 shrink-0">
-                <!-- Feedback Button -->
-                <a href="/feedback" title="Submit Platform Feedback" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-400/25 hover:border-amber-400/50 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-2xs active:scale-95">
-                    <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
-                    <span class="hidden md:inline font-medium">Feedback</span>
-                </a>
-                
-                <!-- Export PDF Button -->
-                <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-400/25 hover:border-amber-400/50 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-2xs active:scale-95">
-                    <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
-                    <span class="hidden md:inline font-medium">PDF</span>
-                </button>
-
-                <!-- Reset Chat Button -->
-                <button onclick="clearChat()" title="Clear Conversation Session" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 rounded-lg text-xs font-mono flex items-center gap-1 transition-colors active:scale-95">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 shrink-0"></i>
-                    <span class="hidden md:inline">Reset</span>
-                </button>
-
-                <!-- Disclaimer / Terms -->
-                <a href="/disclaimer" title="Institutional Legal Disclaimer & Terms" class="p-1.5 sm:px-2 sm:py-1.5 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 rounded-lg text-xs font-mono flex items-center gap-1 transition-colors active:scale-95">
-                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 shrink-0"></i>
-                    <span class="hidden lg:inline">Terms</span>
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Workspace Container (Full Viewport Height) -->
-    <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-2 sm:p-4 overflow-hidden gap-2 sm:gap-3">
-        
-        <!-- Messages Area Card -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scroll space-y-3 sm:space-y-4 p-3 sm:p-6 bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-xs">
+        <!-- Top Judicial Header Bar -->
+        <header class="bg-midnight text-white border-b border-slate-800/90 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 shadow-md gap-2">
             
-            <!-- Default Welcome Card -->
-            <div class="flex flex-col items-start w-full">
-                <div class="p-3 sm:p-4 text-slate-800 space-y-3 w-full">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-lg overflow-hidden shrink-0 bg-slate-900 flex items-center justify-center border border-slate-700">
-                            <img src="/static/juris.png" alt="Juris" class="w-full h-full object-cover" />
+            <!-- Left: Brand & Seal -->
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <a href="/" class="flex items-center gap-2 group">
+                    <img src="/static/juris.png" alt="Juris Logo" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">Juris</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                        <span class="hidden md:inline-block px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider bg-amber-400/10 text-amber-300 border border-amber-400/20 rounded-full">
+                            Philippine Legal AI
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Right Controls: Corpus Filter & Action Toolbar -->
+            <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+                <!-- Corpus Category Filter (Adaptive Width) -->
+                <div class="flex items-center gap-1 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 shadow-2xs">
+                    <i data-lucide="filter" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                    <select id="corpusCategoryFilter" class="bg-transparent text-slate-200 text-[11px] sm:text-xs font-mono outline-none cursor-pointer max-w-[110px] xs:max-w-[140px] sm:max-w-none">
+                        <option value="" class="bg-slate-900">All Philippine Law</option>
+                        <option value="Republic Act" class="bg-slate-900">Republic Acts (Statutes)</option>
+                        <option value="Jurisprudence" class="bg-slate-900">Supreme Court Cases</option>
+                        <option value="Executive & Administrative Issuances" class="bg-slate-900">Executive & Administrative Issuances</option>
+                    </select>
+                </div>
+
+                <!-- Divider -->
+                <div class="h-4 w-px bg-slate-800 hidden xs:block"></div>
+
+                <!-- Action Toolbar Buttons -->
+                <div class="flex items-center gap-1 shrink-0">
+                    <!-- Feedback Button -->
+                    <a href="/feedback" title="Submit Platform Feedback" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-400/25 hover:border-amber-400/50 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-2xs active:scale-95">
+                        <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                        <span class="hidden md:inline font-medium">Feedback</span>
+                    </a>
+                    
+                    <!-- Export PDF Button -->
+                    <button onclick="exportConversationPDF()" title="Export entire conversation to legal memorandum PDF" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-400/25 hover:border-amber-400/50 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-2xs active:scale-95">
+                        <i data-lucide="file-down" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+                        <span class="hidden md:inline font-medium">PDF</span>
+                    </button>
+
+                    <!-- Reset Chat Button -->
+                    <button onclick="clearChat()" title="Clear Conversation Session" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 rounded-lg text-xs font-mono flex items-center gap-1 transition-colors active:scale-95">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span class="hidden md:inline">Reset</span>
+                    </button>
+
+                    <!-- Disclaimer / Terms -->
+                    <button type="button" onclick="openWelcomeSplash()" title="Institutional Legal Disclaimer & Terms" class="p-1.5 sm:px-2 sm:py-1.5 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 rounded-lg text-xs font-mono flex items-center gap-1 transition-colors active:scale-95 cursor-pointer">
+                        <i data-lucide="shield-alert" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span class="hidden lg:inline">Terms</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace Container (Full Viewport Height) -->
+        <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-2 sm:p-4 overflow-hidden gap-2 sm:gap-3">
+            
+            <!-- Messages Area Card -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scroll space-y-3 sm:space-y-4 p-3 sm:p-6 bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-xs">
+                
+                <!-- Default Welcome Card -->
+                <div class="flex flex-col items-start w-full">
+                    <div class="p-3 sm:p-4 text-slate-800 space-y-3 w-full">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg overflow-hidden shrink-0 bg-slate-900 flex items-center justify-center border border-slate-700">
+                                <img src="/static/juris.png" alt="Juris" class="w-full h-full object-cover" />
+                            </div>
+                            <p class="text-sm sm:text-base font-semibold text-slate-900">
+                                Hi, I'm Juris. What do you want to know?
+                            </p>
                         </div>
-                        <p class="text-sm sm:text-base font-semibold text-slate-900">
-                            Hi, I'm Juris. What do you want to know?
-                        </p>
-                    </div>
 
-                    <div class="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
-                        <span class="text-slate-400 font-mono text-[11px]">Samples:</span>
-                        <button onclick="sendQuickPrompt('What are the rights, privileges, and statutory benefits of solo parents under RA 11861?')" class="hover:text-amber-800 hover:underline transition">
-                            Solo Parents Act (RA 11861)
-                        </button>
-                        <span class="text-slate-300">•</span>
-                        <button onclick="sendQuickPrompt('Explain the Supreme Court doctrine on psychological incapacity under Article 36 of the Family Code in recent jurisprudence.')" class="hover:text-amber-800 hover:underline transition">
-                            Psychological Incapacity (Tan-Andal)
-                        </button>
-                        <span class="text-slate-300">•</span>
-                        <button onclick="sendQuickPrompt('What is the prescriptive period for filing a cyberlibel case under RA 10175 and Revised Penal Code?')" class="hover:text-amber-800 hover:underline transition">
-                            Cybercrime Online Libel
-                        </button>
-                        <span class="text-slate-300">•</span>
-                        <button onclick="sendQuickPrompt('What acts constitute economic abuse and what are the requisites under Section 5(i) of RA 9262?')" class="hover:text-amber-800 hover:underline transition">
-                            VAWC Economic Abuse (RA 9262)
-                        </button>
+                        <div class="pt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                            <span class="text-slate-400 font-mono text-[11px]">Samples:</span>
+                            <button onclick="sendQuickPrompt('What are the benefits, cash subsidies, and leave entitlements under the Expanded Solo Parents Welfare Act (RA 11861)?')" class="hover:text-amber-800 hover:underline transition">
+                                Solo Parents Act (RA 11861)
+                            </button>
+                            <span class="text-slate-300">•</span>
+                            <button onclick="sendQuickPrompt('What are the definitive guidelines for psychological incapacity under Article 36 of the Family Code as established in Tan-Andal v. Andal?')" class="hover:text-amber-800 hover:underline transition">
+                                Psychological Incapacity (Tan-Andal)
+                            </button>
+                            <span class="text-slate-300">•</span>
+                            <button onclick="sendQuickPrompt('What are the legal requisites and prescription period for Online Libel under RA 10175 and the Revised Penal Code?')" class="hover:text-amber-800 hover:underline transition">
+                                Cybercrime Online Libel
+                            </button>
+                            <span class="text-slate-300">•</span>
+                            <button onclick="sendQuickPrompt('What acts constitute economic abuse under Section 5(i) of RA 9262?')" class="hover:text-amber-800 hover:underline transition">
+                                VAWC Economic Abuse (RA 9262)
+                            </button>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
-        </div>
-
-        <!-- Retrieved Citations Drawer -->
-        <div id="sourcesDrawer" class="hidden bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 shadow-2xs shrink-0">
-            <div class="flex items-center justify-between mb-1.5 text-xs font-mono">
-                <span class="font-bold text-slate-800 uppercase flex items-center gap-1.5 text-[11px] sm:text-xs">
-                    <i data-lucide="book-open" class="w-4 h-4 text-gold shrink-0"></i>
-                    Retrieved Authorities (<span id="sourceCount">0</span>)
-                </span>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] sm:text-[11px] text-slate-400 hidden sm:inline">Click authority for excerpt &amp; link</span>
-                    <button type="button" onclick="toggleSourcesDrawerCollapse()" id="toggleAuthoritiesBtn" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-md text-[10px] font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
-                        <span id="toggleAuthoritiesText">Show</span>
-                        <i id="toggleAuthoritiesIcon" data-lucide="chevron-down" class="w-3 h-3 text-slate-500"></i>
-                    </button>
+            <!-- Active Citation Drawer (Appears when sources are retrieved) -->
+            <div id="sourcesDrawer" class="hidden px-3 sm:px-4 py-2.5 bg-slate-100 border-x border-b border-slate-200 rounded-b-xl text-xs font-mono mt-[-8px] z-10">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="font-semibold text-slate-700 uppercase tracking-wider text-[10px] sm:text-[11px] flex items-center gap-1">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-gold shrink-0"></i>
+                        Retrieved Legal Authorities (<span id="sourceCount">0</span>)
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-400 hidden sm:inline">Click badge to inspect text</span>
+                        <button type="button" onclick="toggleSourcesDrawerCollapse()" id="toggleAuthoritiesBtn" class="px-2 py-0.5 bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-md text-[10px] font-semibold flex items-center gap-1 transition shadow-2xs active:scale-95 cursor-pointer">
+                            <span id="toggleAuthoritiesText">Show</span>
+                            <i id="toggleAuthoritiesIcon" data-lucide="chevron-down" class="w-3 h-3 text-slate-500"></i>
+                        </button>
+                    </div>
                 </div>
+                <div id="sourceChips" class="hidden flex-wrap gap-1.5 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll"></div>
             </div>
-            <div id="sourceChips" class="hidden flex-wrap gap-1 max-h-24 sm:max-h-20 overflow-y-auto custom-scroll">
-                <!-- Dynamically populated chips -->
-            </div>
-        </div>
 
-        <!-- Bottom Chat Input Bar -->
-        <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-sm shrink-0">
-            <form id="chatForm" onsubmit="handleSend(event)" class="flex items-center gap-1.5 sm:gap-2">
-                <div class="relative flex-1">
-                    <input 
-                        type="text" 
-                        id="chatInput" 
-                        placeholder="Ask any Philippine legal inquiry, Republic Act, or case doctrine..." 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-base sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none transition font-sans pr-9"
-                        autocomplete="off"
-                        required
-                    />
-                    <button type="button" onclick="document.getElementById('chatInput').value=''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 transition">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <!-- Fixed Bottom Input Area -->
+            <div class="pt-1 sm:pt-2 shrink-0">
+                <form id="chatForm" onsubmit="handleSend(event)" class="relative flex items-center gap-1.5 sm:gap-2">
+                    <div class="relative flex-1">
+                        <input 
+                            type="text" 
+                            id="chatInput" 
+                            placeholder="Ask any Philippine legal inquiry, Republic Act, or case doctrine..." 
+                            class="w-full bg-white border border-slate-300 rounded-xl sm:rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold shadow-xs transition"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        id="sendBtn" 
+                        class="bg-midnight hover:bg-slate-800 text-white font-semibold px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm shadow-sm transition-all duration-150 flex items-center gap-1.5 sm:gap-2 active:scale-95 cursor-pointer shrink-0"
+                    >
+                        <span class="hidden sm:inline">Ask Juris</span>
+                        <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                     </button>
-                </div>
+                </form>
+            </div>
 
-                <button 
-                    type="submit" 
-                    id="sendBtn" 
-                    class="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-midnight hover:bg-slate-800 text-gold-light rounded-xl font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 transition shadow-xs shrink-0"
-                >
-                    <span class="hidden sm:inline">Ask Juris</span>
-                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                </button>
-            </form>
-        </div>
+        </main>
 
-    </main>
+        <!-- Institutional Micro-Footer -->
+        <footer class="w-full py-2 px-4 bg-slate-900 text-slate-400 text-[11px] font-mono border-t border-slate-800 shrink-0 text-center flex flex-wrap items-center justify-center gap-2">
+            <span>Data indexed in collaboration with the <a href="https://bettergov.ph" target="_blank" rel="noopener noreferrer" class="text-amber-400 font-semibold hover:underline">BetterGov.ph</a> Open Legal Initiative</span>
+            <span class="text-slate-600">&bull;</span>
+            <button type="button" onclick="openWelcomeSplash()" class="text-amber-400 font-semibold hover:underline cursor-pointer">Disclaimer &amp; Terms</button>
+            <span class="text-slate-600">&bull;</span>
+            <a href="/feedback" class="text-amber-400 font-semibold hover:underline">Submit Feedback</a>
+            <span class="text-slate-600">&bull;</span>
+            <span>© 2026 Republic of the Philippines Law Intelligence</span>
+        </footer>
 
-    <!-- Institutional Micro-Footer -->
-    <footer class="w-full py-2 px-4 bg-slate-900 text-slate-400 text-[11px] font-mono border-t border-slate-800 shrink-0 text-center flex flex-wrap items-center justify-center gap-2">
-        <span>Data indexed in collaboration with the <a href="https://bettergov.ph" target="_blank" rel="noopener noreferrer" class="text-amber-400 font-semibold hover:underline">BetterGov.ph</a> Open Legal Initiative</span>
-        <span class="text-slate-600">&bull;</span>
-        <a href="/disclaimer" class="text-amber-400 font-semibold hover:underline">Disclaimer &amp; Terms</a>
-        <span class="text-slate-600">&bull;</span>
-        <a href="/feedback" class="text-amber-400 font-semibold hover:underline">Submit Feedback</a>
-        <span class="text-slate-600">&bull;</span>
-        <span>© 2026 Republic of the Philippines Law Intelligence</span>
-    </footer>
+    </div><!-- End #mainContentWrapper -->
 
     <!-- Verbatim Citation Modal -->
     <div id="citationModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
@@ -428,8 +508,8 @@
     </div>
 
     <!-- Welcome Legal Disclaimer Splash Screen Modal (Light Mode Theme) -->
-    <div id="welcomeSplashModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs items-center justify-center p-3 sm:p-6 transition-all duration-300">
-        <div class="bg-white text-slate-900 border border-slate-200 rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl shadow-slate-900/20 flex flex-col relative">
+    <div id="welcomeSplashModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md items-center justify-center p-3 sm:p-6 transition-all duration-300">
+        <div id="welcomeSplashCard" class="bg-white text-slate-900 border border-slate-200 rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl shadow-slate-900/30 flex flex-col relative">
             
             <!-- Subtle Gold Accent Header Stripe -->
             <div class="h-1.5 w-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600"></div>
@@ -439,7 +519,7 @@
                 <!-- Brand Emblem & Title Header -->
                 <div class="flex flex-col items-center text-center space-y-2.5">
                     <div class="relative group">
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-md border-2 border-amber-400/50 bg-white p-0.5 flex items-center justify-center">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-md border-2 border-amber-400/60 bg-white p-0.5 flex items-center justify-center juris-emblem-pulse">
                             <img src="/static/juris.png" alt="Juris Logo" class="w-full h-full object-cover rounded-xl" />
                         </div>
                         <div class="absolute -bottom-1 -right-1 bg-amber-500 text-white p-1 rounded-full shadow-md">
@@ -1543,29 +1623,49 @@
             if (acknowledged === 'true') {
                 splash.classList.add('hidden');
                 splash.classList.remove('flex');
+                document.body.classList.remove('splash-active');
             } else {
-                splash.classList.remove('hidden');
-                splash.classList.add('flex');
+                openWelcomeSplash();
+            }
+        }
+
+        function openWelcomeSplash() {
+            const splash = document.getElementById('welcomeSplashModal');
+            const card = document.getElementById('welcomeSplashCard');
+            if (splash) {
+                splash.classList.remove('hidden', 'animate-splash-out');
+                splash.classList.add('flex', 'animate-splash-in');
+                if (card) {
+                    card.classList.remove('animate-splash-card-out');
+                    card.classList.add('animate-splash-card-in');
+                }
+                document.body.classList.add('splash-active');
+                lucide.createIcons();
             }
         }
 
         function acceptWelcomeSplash() {
             const splash = document.getElementById('welcomeSplashModal');
-            if (splash) {
+            const card = document.getElementById('welcomeSplashCard');
+            if (splash && card) {
+                splash.classList.remove('animate-splash-in');
+                splash.classList.add('animate-splash-out');
+                card.classList.remove('animate-splash-card-in');
+                card.classList.add('animate-splash-card-out');
+                document.body.classList.remove('splash-active');
+                setTimeout(() => {
+                    splash.classList.add('hidden');
+                    splash.classList.remove('flex');
+                    const input = document.getElementById('chatInput');
+                    if (input) input.focus();
+                }, 280);
+            } else if (splash) {
                 splash.classList.add('hidden');
                 splash.classList.remove('flex');
+                document.body.classList.remove('splash-active');
             }
             sessionStorage.setItem('juris_welcome_splash_accepted', 'true');
             localStorage.setItem('juris_welcome_splash_accepted', 'true');
-        }
-
-        function openWelcomeSplash() {
-            const splash = document.getElementById('welcomeSplashModal');
-            if (splash) {
-                splash.classList.remove('hidden');
-                splash.classList.add('flex');
-                lucide.createIcons();
-            }
         }
 
         // Focus chat input on page load and initialize splash modal
