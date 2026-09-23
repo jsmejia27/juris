@@ -673,7 +673,11 @@ def resolve_model_execution_path(
         "execution_path": resolved_path,
         "model_name": resolved_model,
         "complexity": complexity,
-        "route_reason": q_route.get("reason", ""),
+        "route_reason": q_route.get("reasons", [""])[0] if q_route.get("reasons") else q_route.get("reason", ""),
+        "confidence_score": q_route.get("score", 0.85),
+        "is_philippine_law": q_route.get("is_philippine_law", True),
+        "needs_open_congress": q_route.get("needs_open_congress", False),
+        "routing_engine": q_route.get("routing_engine", "laya_modernbert"),
         "frontier_enabled": frontier_active
     }
 

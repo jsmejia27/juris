@@ -171,40 +171,49 @@ async def chat_stream(req: ChatRequest):
             )
         )
 
-        # 2. Query Pending Legislative Bills from Open Congress API (BetterGov.ph)
+        # 2. Query Pending Legislative Bills from Open Congress API (BetterGov.ph) conditionally
         all_sources = list(sources)
         bills_context = ""
-        try:
-            bills_data = await loop.run_in_executor(
-                None,
-                lambda: pipeline.congress_client.search_bills(retrieval_query, limit_per_chamber=1)
-            )
-            bills_context = pipeline.congress_client.format_bills_context(bills_data)
+        should_query_bills = (
+            route_decision.get("needs_open_congress", False) or
+            req.category == "Pending Bills" or
+            any(w in req.message.lower() for w in ["senate bill", "house bill", "sb ", "hb ", "pending bill", "divorce bill", "sogie bill"])
+        )
 
-            for sb in bills_data.get("senate_bills", []):
-                all_sources.append({
-                    "category": "Senate Bill",
-                    "title": sb["title"],
-                    "gr_no": sb["bill_name"],
-                    "date": sb.get("date_filed", ""),
-                    "score": 0.99,
-                    "source_url": sb.get("url", ""),
-                    "ponente": sb.get("authors", ""),
-                    "doc_id": sb.get("id", sb["bill_name"])
-                })
-            for hb in bills_data.get("house_bills", []):
-                all_sources.append({
-                    "category": "House Bill",
-                    "title": hb["title"],
-                    "gr_no": hb["bill_name"],
-                    "date": hb.get("date_filed", ""),
-                    "score": 0.99,
-                    "source_url": hb.get("url", ""),
-                    "ponente": hb.get("authors", ""),
-                    "doc_id": hb.get("id", hb["bill_name"])
-                })
-        except Exception as err:
-            logger.warning(f"Non-blocking Open Congress query exception: {err}")
+        if should_query_bills:
+            try:
+                bills_data = await loop.run_in_executor(
+                    None,
+                    lambda: pipeline.congress_client.search_bills(retrieval_query, limit_per_chamber=1)
+                )
+                bills_context = pipeline.congress_client.format_bills_context(bills_data)
+
+                for sb in bills_data.get("senate_bills", []):
+                    all_sources.append({
+                        "category": "Senate Bill",
+                        "title": sb["title"],
+                        "gr_no": sb["bill_name"],
+                        "date": sb.get("date_filed", ""),
+                        "score": 0.99,
+                        "source_url": sb.get("url", ""),
+                        "ponente": sb.get("authors", ""),
+                        "doc_id": sb.get("id", sb["bill_name"])
+                    })
+                for hb in bills_data.get("house_bills", []):
+                    all_sources.append({
+                        "category": "House Bill",
+                        "title": hb["title"],
+                        "gr_no": hb["bill_name"],
+                        "date": hb.get("date_filed", ""),
+                        "score": 0.99,
+                        "source_url": hb.get("url", ""),
+                        "ponente": hb.get("authors", ""),
+                        "doc_id": hb.get("id", hb["bill_name"])
+                    })
+            except Exception as err:
+                logger.warning(f"Non-blocking Open Congress query exception: {err}")
+        else:
+            logger.debug("Skipping Open Congress query based on Laya decision (pure statutory/jurisprudential inquiry).")
 
         # Deduplicate all statutory sources and bills, strictly capping to 4 citations
         deduped_sources = deduplicate_sources(all_sources)[:4]
