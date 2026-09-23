@@ -92,7 +92,7 @@ class PleadingDraftingService:
         retrieved_docs = pipeline.retrieve_legal_context(search_query, limit=4)
         
         legal_authorities_block = "\n\n".join([
-            f"[Authority: {d.metadata.get('title', 'Supreme Court Decision')} ({d.metadata.get('year', 'N/A')}) - GR: {d.metadata.get('gr_number', 'N/A')}]\n{d.page_content}"
+            f"[Authority: {d.get('title') if isinstance(d, dict) else getattr(d, 'metadata', {}).get('title', 'Supreme Court Decision')} ({d.get('year') if isinstance(d, dict) else getattr(d, 'metadata', {}).get('year', 'N/A')}) - GR: {(d.get('gr_no') or d.get('gr_number')) if isinstance(d, dict) else getattr(d, 'metadata', {}).get('gr_number', 'N/A')}]\n{d.get('text', '') if isinstance(d, dict) else getattr(d, 'page_content', '')}"
             for d in retrieved_docs
         ])
 
@@ -118,10 +118,10 @@ class PleadingDraftingService:
             "draft": draft_text,
             "citations_applied": [
                 {
-                    "title": d.metadata.get("title", ""),
-                    "gr_number": d.metadata.get("gr_number", ""),
-                    "year": d.metadata.get("year", ""),
-                    "status": d.metadata.get("doctrine_status", "Active Precedent")
+                    "title": d.get("title") if isinstance(d, dict) else getattr(d, "metadata", {}).get("title", ""),
+                    "gr_number": (d.get("gr_no") or d.get("gr_number", "")) if isinstance(d, dict) else getattr(d, "metadata", {}).get("gr_number", ""),
+                    "year": d.get("year") if isinstance(d, dict) else getattr(d, "metadata", {}).get("year", ""),
+                    "status": (d.get("doctrine_status") or "Active Precedent") if isinstance(d, dict) else getattr(d, "metadata", {}).get("doctrine_status", "Active Precedent")
                 }
                 for d in retrieved_docs
             ]

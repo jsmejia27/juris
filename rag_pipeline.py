@@ -1364,6 +1364,27 @@ class LegalRAGPipeline:
             self.num_ctx = num_ctx
             self._init_llm()
 
+    def retrieve_legal_context(
+        self,
+        query: str,
+        limit: int = 4,
+        category: Optional[str] = None,
+        year_min: Optional[int] = None,
+        year_max: Optional[int] = None,
+        ponente: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves, reranks, and temporality-boosts controlling Philippine legal context documents.
+        """
+        return self.retriever.retrieve(
+            query=query,
+            limit=limit,
+            category=category,
+            year_min=year_min,
+            year_max=year_max,
+            ponente=ponente
+        )
+
     @staticmethod
     def extract_section(text: str) -> str:
         match = re.search(r'\b(?:Section|Sec\.|Article|Art\.)\s*([0-9A-Za-z\-\(\)]+)', text, re.IGNORECASE)

@@ -342,9 +342,9 @@ class CaseVaultService:
 
         with _QDRANT_LOCK:
             try:
-                search_results = self.client.search(
+                response = self.client.query_points(
                     collection_name=VAULT_COLLECTION,
-                    query_vector=query_vector,
+                    query=query_vector,
                     query_filter=models.Filter(
                         must=[
                             models.FieldCondition(
@@ -355,6 +355,7 @@ class CaseVaultService:
                     ),
                     limit=top_k
                 )
+                search_results = response.points
             except Exception as e:
                 logger.error(f"Search error on {VAULT_COLLECTION}: {e}")
                 search_results = []
@@ -398,7 +399,7 @@ class CaseVaultService:
         legal_pipeline = LegalRAGPipeline(llm_model=llm_model)
         legal_docs = legal_pipeline.retrieve_legal_context(focus_issue, limit=4)
         legal_context_text = "\n\n".join([
-            f"[Authority: {d.metadata.get('title', 'Supreme Court Decision')} ({d.metadata.get('year', 'N/A')}) - GR: {d.metadata.get('gr_number', 'N/A')}]\n{d.page_content}"
+            f"[Authority: {d.get('title') if isinstance(d, dict) else getattr(d, 'metadata', {}).get('title', 'Supreme Court Decision')} ({d.get('year') if isinstance(d, dict) else getattr(d, 'metadata', {}).get('year', 'N/A')}) - GR: {(d.get('gr_no') or d.get('gr_number')) if isinstance(d, dict) else getattr(d, 'metadata', {}).get('gr_number', 'N/A')}]\n{d.get('text', '') if isinstance(d, dict) else getattr(d, 'page_content', '')}"
             for d in legal_docs
         ])
 
@@ -463,10 +464,10 @@ Specific motions, objections, or documentary exhibits to introduce to secure vic
             "case_sources": case_chunks,
             "legal_authorities": [
                 {
-                    "title": d.metadata.get("title", ""),
-                    "gr_number": d.metadata.get("gr_number", ""),
-                    "year": d.metadata.get("year", ""),
-                    "status": d.metadata.get("doctrine_status", "Active Precedent")
+                    "title": d.get("title") if isinstance(d, dict) else getattr(d, "metadata", {}).get("title", ""),
+                    "gr_number": (d.get("gr_no") or d.get("gr_number", "")) if isinstance(d, dict) else getattr(d, "metadata", {}).get("gr_number", ""),
+                    "year": d.get("year") if isinstance(d, dict) else getattr(d, "metadata", {}).get("year", ""),
+                    "status": (d.get("doctrine_status") or "Active Precedent") if isinstance(d, dict) else getattr(d, "metadata", {}).get("doctrine_status", "Active Precedent")
                 }
                 for d in legal_docs
             ]
