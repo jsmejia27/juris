@@ -266,7 +266,7 @@ def apply_temporal_recency_boost(
 ) -> List[Dict[str, Any]]:
     """
     Temporal Recency Boost:
-    Prioritizes modern controlling Supreme Court jurisprudence (2015-2026) over century-old cases,
+    Prioritizes modern controlling Supreme Court jurisprudence (2021-2026) over century-old cases,
     while preserving historic landmarks when historical intent is detected in the query.
     """
     if not candidates:
@@ -285,25 +285,34 @@ def apply_temporal_recency_boost(
         doc_copy["extracted_year"] = doc_year
 
         time_boost = 0.0
-        if not is_hist and doc_year:
-            if is_juris:
-                # Supreme Court Decisions Temporal Weighting
-                if doc_year >= 2018:
-                    time_boost = 0.25      # Contemporary controlling precedents (2018-2026)
-                elif doc_year >= 2010:
-                    time_boost = 0.12      # Recent modern precedents (2010-2017)
-                elif doc_year >= 1987:
-                    time_boost = 0.00      # Post-1987 Constitutional baseline (1987-2009)
-                elif doc_year >= 1970:
-                    time_boost = -0.10     # Pre-1987 decisions
-                else:
-                    time_boost = -0.25     # Pre-1970 century-old decisions (1901-1969)
-            elif is_statute:
-                # Modern amending statutes (e.g. RA 11861 over RA 8972)
-                if doc_year >= 2018:
-                    time_boost = 0.10
-                elif doc_year >= 2010:
-                    time_boost = 0.05
+        if not is_hist:
+            if doc_year:
+                if is_juris:
+                    # Supreme Court Decisions Temporal Weighting
+                    if doc_year >= 2021:
+                        time_boost = 0.35      # Contemporary sitting Supreme Court precedents (2021-2026)
+                    elif doc_year >= 2015:
+                        time_boost = 0.20      # Recent landmark precedents (2015-2020)
+                    elif doc_year >= 2005:
+                        time_boost = 0.05      # Modern baseline (2005-2014)
+                    elif doc_year >= 1987:
+                        time_boost = 0.00      # Post-1987 Constitutional baseline (1987-2004)
+                    elif doc_year >= 1970:
+                        time_boost = -0.15     # Pre-1987 decisions
+                    else:
+                        time_boost = -0.30     # Pre-1970 century-old decisions (1901-1969)
+                elif is_statute:
+                    # Modern amending statutes (e.g. RA 11861 over RA 8972)
+                    if doc_year >= 2018:
+                        time_boost = 0.15
+                    elif doc_year >= 2010:
+                        time_boost = 0.08
+
+            # G.R. docket continuity bonus (higher docket number = newer case)
+            doc_identifier = (str(doc.get("gr_no") or "") + " " + str(doc.get("title") or "") + " " + str(doc.get("doc_id") or "")).lower()
+            gr_digits_match = re.search(r'\b(2[2-9]\d{4}|[3-9]\d{5})\b', doc_identifier)
+            if gr_digits_match:
+                time_boost += 0.05
 
         current_score = float(doc.get("score") if doc.get("score") is not None else (doc.get("rerank_score") or 0.0))
         final_score = round(current_score + time_boost, 4)

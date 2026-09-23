@@ -1277,34 +1277,44 @@ class LegalRetriever:
         boosted_candidates = apply_lexical_anchor_boost(candidate_docs, query)
 
         # 3. Stage 3: Neural Cross-Encoder Re-Ranking (Top-50 candidates -> Top-8)
+        # 3. Stage 3: Neural Cross-Encoder Re-Ranking (Top-50 candidates -> Top-30 reranked pool)
         try:
-            reranked_docs = self.ranker.rerank_passages(query, boosted_candidates[:50], top_k=limit*2)
+            rerank_pool_size = min(30, len(boosted_candidates))
+            reranked_docs = self.ranker.rerank_passages(query, boosted_candidates[:50], top_k=rerank_pool_size)
         except Exception as e:
             logger.warning(f"Re-ranking exception, falling back to boosted candidates: {e}")
             reranked_docs = boosted_candidates
 
-        # 4. Stage 4: Temporal Recency Boosting (Modern Jurisprudence Prioritization)
+        # 4. Stage 4: Temporal Recency Boosting (Modern Precedents 2021-2026 Prioritization)
         from doctrine_currency import apply_temporal_recency_boost, filter_and_tag_doctrine_currency, is_historical_query
         temporally_boosted = apply_temporal_recency_boost(reranked_docs, query)
 
         # 5. Stage 5: Doctrine Currency Filtering & Tagging
         currency_filtered = filter_and_tag_doctrine_currency(temporally_boosted, query)
 
-        # 6. Stage 6: Guaranteed Recency Slot Allocation
-        final_selected = currency_filtered[:limit]
+        # 6. Stage 6: Case-Level Deduplication (Ensure distinct legal decisions across candidate pool)
+        distinct_authorities = deduplicate_sources(currency_filtered)
+
+        # 7. Stage 7: Guaranteed Contemporary Slot Allocation (At least 2 modern cases >= 2018)
+        final_selected = list(distinct_authorities[:limit])
         if limit >= 4 and not is_historical_query(query):
-            has_modern_juris = any(
-                (d.get("extracted_year") or 0) >= 2015 and any(k in str(d.get("category", "")).lower() for k in ["jurisprudence", "decision", "court", "judjuris", "case"])
-                for d in final_selected
-            )
-            if not has_modern_juris:
-                # Find best modern jurisprudence in the remaining pool
-                for cand in currency_filtered[limit:]:
-                    cand_year = cand.get("extracted_year") or 0
+            modern_cases = [
+                d for d in final_selected
+                if (d.get("extracted_year") or d.get("year") or 0) >= 2018 and any(k in str(d.get("category", "")).lower() for k in ["jurisprudence", "decision", "court", "judjuris", "case"])
+            ]
+            if len(modern_cases) < 2:
+                for cand in distinct_authorities[limit:]:
+                    cand_year = cand.get("extracted_year") or cand.get("year") or 0
                     cat_lower = str(cand.get("category", "")).lower()
-                    if cand_year >= 2015 and any(k in cat_lower for k in ["jurisprudence", "decision", "court", "judjuris", "case"]):
-                        final_selected[-1] = cand
-                        break
+                    if cand_year >= 2018 and any(k in cat_lower for k in ["jurisprudence", "decision", "court", "judjuris", "case"]):
+                        for idx in reversed(range(len(final_selected))):
+                            target_year = final_selected[idx].get("extracted_year") or final_selected[idx].get("year") or 0
+                            if target_year < 2018:
+                                final_selected[idx] = cand
+                                break
+                        modern_cases.append(cand)
+                        if len(modern_cases) >= 2:
+                            break
 
         return final_selected
 
