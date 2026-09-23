@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import threading
@@ -10,7 +11,7 @@ import struct
 import base64
 import urllib.parse
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Request, Response, BackgroundTasks, Depends, HTTPException, status, Cookie, Header
+from fastapi import FastAPI, Request, Response, BackgroundTasks, Depends, HTTPException, status, Cookie, Header, UploadFile, File, Form
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 import pyarrow.parquet as pq
 import secrets
+
+from case_vault_service import CaseVaultService
+from pleading_drafting_service import PleadingDraftingService
 
 from rag_pipeline import (
     LegalRAGPipeline,
@@ -938,6 +942,165 @@ async def search_legal_authorities(req: LegalSearchRequest):
         }
     except Exception as e:
         logger.error(f"Error in /api/legal/search: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ==========================================
+# HARVEY-STYLE CASE VAULT ENDPOINTS
+# ==========================================
+
+vault_service = CaseVaultService()
+drafting_service = PleadingDraftingService()
+
+class CreateCaseRequest(BaseModel):
+    title: str = Field(..., min_length=2, max_length=300)
+    docket_number: Optional[str] = Field(default="", max_length=150)
+    court: Optional[str] = Field(default="", max_length=200)
+    case_type: Optional[str] = Field(default="Civil Litigation", max_length=100)
+    parties: Optional[str] = Field(default="", max_length=300)
+    description: Optional[str] = Field(default="", max_length=1000)
+
+class CaseQueryRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=2000)
+    top_k: Optional[int] = Field(default=5, ge=1, le=20)
+
+class CaseCrossExamineRequest(BaseModel):
+    focus_issue: str = Field(..., min_length=3, max_length=2000)
+    model: Optional[str] = Field(default="qwen3.5:9b", max_length=64)
+
+@app.get("/api/vault/cases")
+async def get_all_vault_cases():
+    try:
+        cases = vault_service.list_cases()
+        return {"status": "ok", "cases": cases, "total": len(cases)}
+    except Exception as e:
+        logger.error(f"Error listing vault cases: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/vault/cases")
+async def create_vault_case(req: CreateCaseRequest):
+    try:
+        new_case = vault_service.create_case(
+            title=req.title,
+            docket_number=req.docket_number or "",
+            court=req.court or "",
+            case_type=req.case_type or "Civil Litigation",
+            parties=req.parties or "",
+            description=req.description or ""
+        )
+        return {"status": "ok", "case": new_case}
+    except Exception as e:
+        logger.error(f"Error creating vault case: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/vault/cases/{case_id}")
+async def get_vault_case_details(case_id: str):
+    case = vault_service.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case dossier not found.")
+    return {"status": "ok", "case": case}
+
+@app.delete("/api/vault/cases/{case_id}")
+async def delete_vault_case(case_id: str):
+    success = vault_service.delete_case(case_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Case dossier not found or could not be deleted.")
+    return {"status": "ok", "message": f"Case dossier {case_id} and its vector indices have been securely deleted."}
+
+@app.post("/api/vault/cases/{case_id}/upload")
+async def upload_case_document(
+    case_id: str,
+    file: UploadFile = File(...),
+    doc_category: str = Form("Pleading / Motion")
+):
+    try:
+        content = await file.read()
+        doc_entry = vault_service.add_document_to_case(
+            case_id=case_id,
+            filename=file.filename,
+            file_bytes=content,
+            doc_category=doc_category
+        )
+        return {"status": "ok", "document": doc_entry}
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error uploading case document: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/vault/cases/{case_id}/query")
+async def query_case_dossier(case_id: str, req: CaseQueryRequest):
+    try:
+        results = vault_service.search_case_vault(case_id=case_id, query=req.query, top_k=req.top_k)
+        return {"status": "ok", "query": req.query, "results": results, "total": len(results)}
+    except Exception as e:
+        logger.error(f"Error querying case vault: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/vault/cases/{case_id}/cross-examine")
+async def cross_examine_case_dossier(case_id: str, req: CaseCrossExamineRequest):
+    try:
+        result = vault_service.cross_examine_case(
+            case_id=case_id,
+            focus_issue=req.focus_issue,
+            llm_model=req.model or "qwen3.5:9b"
+        )
+        return {"status": "ok", **result}
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error in cross-examination: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ==========================================
+# PHILIPPINE PLEADING DRAFTING ENDPOINTS
+# ==========================================
+
+class PleadingGenerateRequest(BaseModel):
+    template_id: str = Field(..., min_length=2, max_length=100)
+    case_data: Dict[str, Any] = Field(default={})
+    model: Optional[str] = Field(default="qwen3.5:9b", max_length=64)
+    temperature: Optional[float] = Field(default=0.1, ge=0.0, le=1.0)
+
+class PleadingDocxExportRequest(BaseModel):
+    draft_text: str = Field(..., min_length=10)
+    title: Optional[str] = Field(default="Philippine_Legal_Pleading", max_length=100)
+
+@app.get("/api/drafting/templates")
+async def get_pleading_templates():
+    templates = drafting_service.list_templates()
+    return {"status": "ok", "templates": templates}
+
+@app.post("/api/drafting/generate")
+async def generate_court_pleading(req: PleadingGenerateRequest):
+    try:
+        res = drafting_service.generate_pleading(
+            template_id=req.template_id,
+            case_data=req.case_data,
+            model=req.model or "qwen3.5:9b",
+            temperature=req.temperature or 0.1
+        )
+        return {"status": "ok", **res}
+    except Exception as e:
+        logger.error(f"Error generating pleading: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/drafting/export-docx")
+async def export_pleading_docx(req: PleadingDocxExportRequest):
+    try:
+        stream = drafting_service.export_to_docx(req.draft_text, title=req.title or "Philippine_Legal_Pleading")
+        safe_title = re.sub(r'[^a-zA-Z0-9_\-]', '_', req.title or "Pleading")
+        filename = f"{safe_title}.docx"
+        
+        headers = {
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+        return Response(
+            content=stream.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers=headers
+        )
+    except Exception as e:
+        logger.error(f"Error exporting docx: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ==========================================
