@@ -38,6 +38,9 @@ bin/
 *.exe
 *.dll
 
+# Local Case Vault Data
+vault/
+
 # IDE & Tooling Metadata
 .stitch/
 .vscode/

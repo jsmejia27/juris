@@ -30,6 +30,11 @@ from rag_pipeline import (
     SYSTEM_PROMPT_TEMPLATE,
     PROMPT_TAB1_TREATISE,
     PROMPT_TAB2_EDITORIAL,
+    PROMPT_EXECUTIVE_BRIEF,
+    PROMPT_CORPORATE_ADVISORY,
+    PROMPT_BAR_ACADEMIC,
+    get_prompt_for_track,
+    build_timeline_data,
     DEFAULT_STORAGE_DIR,
     DEFAULT_COLLECTION,
     deduplicate_sources,
@@ -112,6 +117,7 @@ class ChatRequest(BaseModel):
     top_k: Optional[int] = Field(default=4, ge=1, le=16)
     year_min: Optional[int] = Field(default=1901, ge=1900, le=2026)
     year_max: Optional[int] = Field(default=2026, ge=1900, le=2026)
+    research_track: Optional[str] = Field(default="treatise", max_length=50)
 
     @field_validator("model")
     def sanitize_model(cls, v):
@@ -153,8 +159,8 @@ async def chat_stream(req: ChatRequest):
     async def event_generator():
         # 0. Route Query and Resolve Model Execution Path
         route_decision = resolve_model_execution_path(req.message, requested_model=req.model)
-        logger.info(f"Query routing decision: path={route_decision['execution_path']}, complexity={route_decision['complexity']}")
-        yield f"data: {json.dumps({'type': 'routing', 'decision': route_decision})}\n\n"
+        logger.info(f"Query routing decision: path={route_decision['execution_path']}, complexity={route_decision['complexity']}, track={req.research_track}")
+        yield f"data: {json.dumps({'type': 'routing', 'decision': route_decision, 'track': req.research_track})}\n\n"
 
         # Contextualize Follow-up Query for Retrieval
         history_dicts = [{"role": h.role, "content": h.content} for h in (req.history or [])]
@@ -221,16 +227,19 @@ async def chat_stream(req: ChatRequest):
 
         # Deduplicate all statutory sources and bills, strictly capping to 4 citations
         deduped_sources = deduplicate_sources(all_sources)[:4]
+        timeline_data = build_timeline_data(deduped_sources)
 
-        # Send combined sources event
-        yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources})}\n\n"
+        # Send combined sources event with timeline metadata
+        yield f"data: {json.dumps({'type': 'sources', 'sources': deduped_sources, 'timeline': timeline_data})}\n\n"
         await asyncio.sleep(0.01)
 
         # 3. Format Context & Multi-Turn Prompts for Dual Tabs
         context_str = pipeline.format_context(deduped_sources, bills_context=bills_context)
         history_section = pipeline.format_history_section(history_dicts)
         
-        prompt_tab1 = PROMPT_TAB1_TREATISE.format(
+        # Select prompt template matching research track
+        prompt_template_tab1 = get_prompt_for_track(req.research_track)
+        prompt_tab1 = prompt_template_tab1.format(
             history_section=history_section,
             context=context_str,
             question=req.message
@@ -241,7 +250,7 @@ async def chat_stream(req: ChatRequest):
             question=req.message
         )
 
-        # Stream Tab 1: In-Depth Legal Treatise
+        # Stream Tab 1: In-Depth Legal Treatise / Selected Track
         accumulated_tab1 = []
         for chunk in pipeline.llm.stream(prompt_tab1):
             accumulated_tab1.append(chunk)
@@ -897,7 +906,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_landing():
-    with open("static/landing.html", "r", encoding="utf-8") as f:
+    with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.get("/chat", response_class=HTMLResponse)

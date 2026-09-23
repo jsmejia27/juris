@@ -487,7 +487,30 @@
             </div>
 
             <!-- Fixed Bottom Input Area -->
-            <div class="pt-1.5 sm:pt-3 shrink-0">
+            <div class="pt-1.5 sm:pt-2.5 shrink-0">
+                <!-- Research Track & Depth Mode Selector Bar -->
+                <div class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1.5 mb-1.5 text-xs">
+                    <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase tracking-wider shrink-0 flex items-center gap-1">
+                        <i data-lucide="compass" class="w-3.5 h-3.5 text-amber-500"></i> Track:
+                    </span>
+                    <button type="button" onclick="setResearchTrack('treatise')" id="trackBtn-treatise" class="track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-amber-400 text-slate-950 shadow-xs cursor-pointer">
+                        <i data-lucide="scroll" class="w-3 h-3 text-slate-950"></i>
+                        <span>🏛️ Litigation Treatise</span>
+                    </button>
+                    <button type="button" onclick="setResearchTrack('executive')" id="trackBtn-executive" class="track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                        <i data-lucide="zap" class="w-3 h-3 text-amber-600"></i>
+                        <span>⚡ Executive Brief (1-Page)</span>
+                    </button>
+                    <button type="button" onclick="setResearchTrack('corporate')" id="trackBtn-corporate" class="track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                        <i data-lucide="building-2" class="w-3 h-3 text-amber-600"></i>
+                        <span>🏢 Corporate Advisory</span>
+                    </button>
+                    <button type="button" onclick="setResearchTrack('bar')" id="trackBtn-bar" class="track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                        <i data-lucide="graduation-cap" class="w-3 h-3 text-amber-600"></i>
+                        <span>🎓 Bar Review & Academic</span>
+                    </button>
+                </div>
+
                 <form id="chatForm" onsubmit="handleSend(event)" class="relative flex items-center gap-1.5 sm:gap-2">
                     <div class="relative flex-1">
                         <input 
@@ -745,6 +768,36 @@
 
     </div><!-- End #mainContentWrapper -->
 
+    <!-- Split-Screen Source Inspector Drawer -->
+    <div id="sourceInspectorDrawerBackdrop" onclick="closeSourceInspectorDrawer()" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 transition-opacity"></div>
+    <div id="sourceInspectorDrawer" class="fixed inset-y-0 right-0 max-w-2xl w-full bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200 flex flex-col">
+        <!-- Drawer Header -->
+        <div class="p-4 sm:p-5 border-b border-slate-800 bg-slate-950 text-white flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-sm">
+                    <i data-lucide="scale" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-serif font-bold text-base sm:text-lg text-white">Philippine Precedent &amp; Statute Inspector</h3>
+                    <p class="text-[11px] font-mono text-amber-300">Verified Supreme Court Holdings &amp; Codal Excerpts</p>
+                </div>
+            </div>
+            <button onclick="closeSourceInspectorDrawer()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer active:scale-95">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Authority Tabs Bar -->
+        <div id="drawerSourceTabs" class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto custom-scroll shrink-0">
+            <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Authority Body View -->
+        <div id="drawerSourceContent" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scroll bg-slate-50/50">
+            <!-- Rendered dynamically -->
+        </div>
+    </div>
+
     <!-- New Case Dossier Modal -->
     <div id="newCaseModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm items-center justify-center p-3 sm:p-6">
         <div class="bg-white rounded-2xl border border-slate-200 w-full max-w-lg shadow-2xl p-5 sm:p-6 space-y-4">
@@ -979,6 +1032,24 @@
             cooldownInterval = setInterval(updateCooldownUI, 1000);
         }
 
+        let currentResearchTrack = 'treatise';
+
+        function setResearchTrack(track) {
+            currentResearchTrack = track || 'treatise';
+            const tracks = ['treatise', 'executive', 'corporate', 'bar'];
+            tracks.forEach(t => {
+                const btn = document.getElementById(`trackBtn-${t}`);
+                if (btn) {
+                    if (t === currentResearchTrack) {
+                        btn.className = 'track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-amber-400 text-slate-950 shadow-xs cursor-pointer';
+                    } else {
+                        btn.className = 'track-pill px-2.5 py-1 rounded-lg font-semibold text-[11px] flex items-center gap-1.5 transition bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer';
+                    }
+                }
+            });
+            lucide.createIcons();
+        }
+
         function changeModel(modelName) {
             currentModel = modelName;
         }
@@ -1066,6 +1137,7 @@
             let accumulatedTab2 = "";
             let accumulatedThought = "";
             let sources = [];
+            let timeline = [];
             activeSourcesList = [];
 
             // Add user message to history
@@ -1075,6 +1147,7 @@
                 turnNumber: currentTurnIdx + 1,
                 userQuery: message,
                 category: category || "All Philippine Law",
+                researchTrack: currentResearchTrack,
                 timestamp: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
                 tab1Response: "",
                 tab2Response: "",
@@ -1082,7 +1155,8 @@
                 assistantResponse: "",
                 activeTab: 1,
                 thought: "",
-                sources: []
+                sources: [],
+                timeline: []
             };
             sessionTurns.push(currentTurnData);
 
@@ -1097,7 +1171,8 @@
                         model: currentModel,
                         temperature: 0.1,
                         num_ctx: 24576,
-                        top_k: 4
+                        top_k: 4,
+                        research_track: currentResearchTrack
                     })
                 });
 
@@ -1137,8 +1212,10 @@
                                     }
                                 } else if (parsed.type === "sources") {
                                     sources = parsed.sources || [];
+                                    timeline = parsed.timeline || [];
                                     activeSourcesList = sources;
                                     currentTurnData.sources = sources.slice();
+                                    currentTurnData.timeline = timeline.slice();
                                     renderSourcesDrawer(sources);
                                     if (!hasReceivedContent) {
                                         assistantCard.innerHTML = `
@@ -1208,6 +1285,9 @@
                     currentTurnData.tab1Response = finalActiveText.trim();
                     currentTurnData.thought = accumulatedThought;
                     currentTurnData.sources = activeSourcesList.slice();
+                    if (!currentTurnData.timeline || currentTurnData.timeline.length === 0) {
+                        currentTurnData.timeline = buildTimelineFromSources(currentTurnData.sources);
+                    }
                     renderStreamingOutput(assistantCard, accumulatedThought, currentTurnData, currentTurnIdx);
                 }
                 isGenerating = false;
@@ -1227,6 +1307,30 @@
             }
         }
 
+        function buildTimelineFromSources(sources) {
+            if (!sources || !Array.isArray(sources)) return [];
+            const list = sources.map(s => {
+                let yr = s.extracted_year || s.year;
+                if (!yr && s.date) {
+                    const m = String(s.date).match(/\b(19\d\d|20\d\d)\b/);
+                    if (m) yr = parseInt(m[1]);
+                }
+                return {
+                    year: yr || 2024,
+                    title: s.title || "Philippine Precedent",
+                    gr_no: s.gr_no || s.gr_number || "",
+                    category: s.category || "Jurisprudence",
+                    ponente: s.ponente || "",
+                    status: s.doctrine_status || "Active Precedent",
+                    summary: s.summary || (s.text ? s.text.substring(0, 180) + '...' : ''),
+                    source_url: s.source_url || "",
+                    full_text: s.text || ""
+                };
+            });
+            list.sort((a, b) => a.year - b.year);
+            return list;
+        }
+
         function renderStreamingOutput(container, thought, turnDataOrText, turnIdx = null) {
             let html = "";
 
@@ -1235,7 +1339,8 @@
                 activeTab: 1,
                 tab1Response: typeof turnDataOrText === 'string' ? turnDataOrText : '',
                 tab2Response: '',
-                assistantResponse: typeof turnDataOrText === 'string' ? turnDataOrText : ''
+                assistantResponse: typeof turnDataOrText === 'string' ? turnDataOrText : '',
+                timeline: []
             };
             const activeTab = turn.activeTab || 1;
             const text = (activeTab === 2 ? (turn.tab2Response || turn.assistantResponse) : (turn.tab1Response || turn.assistantResponse)) || "";
@@ -1256,7 +1361,53 @@
                 }
             }
 
-            // 2. Legal Reasoning Trace
+            // 2. Visual Doctrine Evolution Timeline (Philippine Citator Map)
+            const timelineItems = (turn.timeline && turn.timeline.length > 0) ? turn.timeline : buildTimelineFromSources(turn.sources || activeSourcesList);
+            if (timelineItems && timelineItems.length > 0) {
+                const timelineCards = timelineItems.map((item, tIdx) => {
+                    const status = (item.status || 'Active Precedent').toLowerCase();
+                    let statusColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+                    let statusText = 'Controlling';
+                    if (status.includes('modified')) {
+                        statusColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                        statusText = 'Modified';
+                    } else if (status.includes('overruled') || status.includes('reversed') || status.includes('abandoned')) {
+                        statusColor = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+                        statusText = 'Overruled';
+                    } else if (item.category && (item.category.includes('Republic Act') || item.category.includes('Bill') || item.category.includes('Statute'))) {
+                        statusColor = 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+                        statusText = 'Enactment';
+                    }
+
+                    return `
+                        <button type="button" onclick="openSourceInspectorDrawer(${tIdx})" class="flex-shrink-0 text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-xl transition shadow-xs group w-44 sm:w-48 cursor-pointer">
+                            <div class="flex items-center justify-between gap-1 mb-1">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">${item.year || 'SC'}</span>
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border ${statusColor}">${statusText}</span>
+                            </div>
+                            <div class="font-bold text-xs text-white truncate group-hover:text-amber-300 transition-colors">${escapeHtml(cleanCitationTitle(item.title || item.gr_no))}</div>
+                            <div class="text-[10px] font-mono text-slate-400 truncate mt-0.5">${escapeHtml(item.gr_no || item.category || '')}</div>
+                        </button>
+                    `;
+                }).join('<div class="text-slate-600 font-bold text-xs px-0.5 select-none shrink-0">&rarr;</div>');
+
+                html += `
+                    <div class="mb-4 p-3 bg-slate-950 text-white rounded-xl border border-slate-800 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-1.5 text-xs font-serif font-bold text-amber-300">
+                                <i data-lucide="git-branch" class="w-3.5 h-3.5 text-amber-400"></i>
+                                <span>Philippine Citator &amp; Doctrine Evolution Timeline</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-slate-400 hidden sm:inline">Click card to inspect full holding</span>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto custom-scroll pb-1">
+                            ${timelineCards}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Legal Reasoning Trace
             if (thought) {
                 html += `
                     <details class="thought-box" open>
@@ -1266,7 +1417,7 @@
                 `;
             }
 
-            // 3. Response Prose & Suggested Next Inquiries
+            // 4. Response Prose & Suggested Next Inquiries
             if (text) {
                 let mainText = text;
                 let planningBlock = "";
@@ -1301,7 +1452,7 @@
                 const sanitizedHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(styledHtml) : styledHtml;
                 html += `<div class="legal-prose text-slate-800">${sanitizedHtml}</div>`;
 
-                // Render Dynamic Contextual Follow-Up Prompts (Autohidden / Collapsed by Default)
+                // Render Dynamic Contextual Follow-Up Prompts
                 if (suggestedInquiries.length > 0) {
                     const isCooling = typeof cooldownSecondsRemaining !== 'undefined' && cooldownSecondsRemaining > 0;
                     const showInquiries = turn && turn.showSuggestedInquiries === true;
@@ -1350,7 +1501,7 @@
                 }
             }
 
-            // 4. Response Tabs & Action Toolbar (Tabs placed above copy and download PDF button)
+            // 5. Response Tabs & Action Toolbar (Includes One-Click Pleading Bridge)
             if (turnIdx !== null) {
                 const hasDigest = turn.tab2Response || turn.tab2Status === 'generating' || turn.tab2Status === 'ready';
                 html += `
@@ -1370,13 +1521,17 @@
                             ` : `
                                 <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
                                     <i data-lucide="scroll" class="w-4 h-4 text-amber-600"></i>
-                                    <span>📜 In-Depth Legal Treatise</span>
+                                    <span>📜 ${turn.researchTrack === 'executive' ? '⚡ Executive Brief' : (turn.researchTrack === 'corporate' ? '🏢 Corporate Advisory' : (turn.researchTrack === 'bar' ? '🎓 Bar Review Primer' : 'In-Depth Legal Treatise'))}</span>
                                 </div>
                             `}
                         </div>
 
-                        <!-- Action Buttons: Copy & Download PDF (Bound to Active Tab) -->
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <!-- Action Buttons: Pleading Bridge, Copy & Download PDF -->
+                        <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                            <button onclick="transferResearchToPleading(${turnIdx})" title="Transfer research grounds & citations directly into Pleading Generator" class="flex-1 sm:flex-none justify-center px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl transition flex items-center gap-1.5 text-xs shadow-2xs active:scale-95 cursor-pointer">
+                                <i data-lucide="file-signature" class="w-3.5 h-3.5 shrink-0 text-slate-950"></i>
+                                <span>⚖️ Draft Court Pleading</span>
+                            </button>
                             ${!hasDigest ? `
                                 <button onclick="requestExecutiveDigest(${turnIdx})" title="Optionally generate executive summary" class="flex-1 sm:flex-none justify-center px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-xs font-medium shadow-2xs">
                                     <i data-lucide="sparkles" class="w-3 h-3 text-gold"></i>
@@ -1385,7 +1540,7 @@
                             ` : ''}
                             <button onclick="copyTurnResponse(${turnIdx})" class="flex-1 sm:flex-none justify-center px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5 text-xs font-medium shadow-2xs">
                                 <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
-                                <span id="copy-btn-text-${turnIdx}">Copy (${activeTab === 1 ? 'Treatise' : 'Digest'})</span>
+                                <span id="copy-btn-text-${turnIdx}">Copy</span>
                             </button>
                             <button onclick="exportSingleTurnPDF(${turnIdx})" class="flex-1 sm:flex-none justify-center px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold shadow-2xs">
                                 <i data-lucide="download" class="w-3.5 h-3.5 text-gold shrink-0"></i>
@@ -1911,6 +2066,179 @@
             const modal = document.getElementById('citationModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        // =============================================================
+        // SPLIT-SCREEN SOURCE INSPECTOR DRAWER
+        // =============================================================
+        let currentDrawerAuthorities = [];
+        let currentDrawerActiveIdx = 0;
+
+        function openSourceInspectorDrawer(index = 0) {
+            const list = (activeSourcesList && activeSourcesList.length > 0) ? activeSourcesList : [];
+            if (list.length === 0) return;
+            currentDrawerAuthorities = list;
+            currentDrawerActiveIdx = Math.max(0, Math.min(index, list.length - 1));
+
+            const drawer = document.getElementById('sourceInspectorDrawer');
+            const backdrop = document.getElementById('sourceInspectorDrawerBackdrop');
+            if (!drawer || !backdrop) return;
+
+            renderDrawerTabs();
+            renderDrawerAuthorityContent(currentDrawerActiveIdx);
+
+            backdrop.classList.remove('hidden');
+            drawer.classList.remove('translate-x-full');
+            lucide.createIcons();
+        }
+
+        function closeSourceInspectorDrawer() {
+            const drawer = document.getElementById('sourceInspectorDrawer');
+            const backdrop = document.getElementById('sourceInspectorDrawerBackdrop');
+            if (drawer) drawer.classList.add('translate-x-full');
+            if (backdrop) backdrop.classList.add('hidden');
+        }
+
+        function switchDrawerAuthority(index) {
+            currentDrawerActiveIdx = index;
+            renderDrawerTabs();
+            renderDrawerAuthorityContent(index);
+        }
+
+        function renderDrawerTabs() {
+            const tabsContainer = document.getElementById('drawerSourceTabs');
+            if (!tabsContainer) return;
+            tabsContainer.innerHTML = currentDrawerAuthorities.map((s, idx) => {
+                const isActive = idx === currentDrawerActiveIdx;
+                const title = cleanCitationTitle(s.title || s.law_no || s.gr_no || `Doc ${idx+1}`);
+                const shortTitle = title.length > 20 ? title.substring(0, 18) + '...' : title;
+                return `
+                    <button onclick="switchDrawerAuthority(${idx})" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isActive ? 'bg-midnight text-amber-400 shadow-xs' : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'}">
+                        <span>${idx + 1}. ${escapeHtml(shortTitle)}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderDrawerAuthorityContent(idx) {
+            const s = currentDrawerAuthorities[idx];
+            const container = document.getElementById('drawerSourceContent');
+            if (!s || !container) return;
+
+            const status = (s.doctrine_status || 'Active Precedent').toLowerCase();
+            let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">✓ GOOD LAW / CONTROLLING</span>';
+            if (status.includes('modified')) {
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠️ MODIFIED DOCTRINE</span>';
+            } else if (status.includes('overruled') || status.includes('reversed') || status.includes('abandoned')) {
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300">⛔ OVERRULED PRECEDENT</span>';
+            }
+
+            let externalLinks = [];
+            if (s.gr_no) {
+                const grClean = encodeURIComponent(s.gr_no.trim());
+                externalLinks.push(`
+                    <a href="https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/1/${grClean}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-600"></i>
+                        <span>SC E-Library</span>
+                    </a>
+                `);
+            }
+            if (s.law_no || (s.category && s.category.includes('Republic Act'))) {
+                externalLinks.push(`
+                    <a href="https://www.officialgazette.gov.ph/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>Official Gazette</span>
+                    </a>
+                `);
+            }
+            externalLinks.push(`
+                <button onclick="copyFormalCitation(${idx})" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                    <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-600"></i>
+                    <span>Copy Formal Citation</span>
+                </button>
+            `);
+
+            container.innerHTML = `
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block mb-0.5">Primary Authority Title</span>
+                            <h4 class="font-serif font-bold text-slate-900 text-base sm:text-lg leading-snug">${escapeHtml(cleanCitationTitle(s.title || s.law_no || s.gr_no))}</h4>
+                        </div>
+                        ${statusBadge}
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700">
+                        <div><strong>Category:</strong> ${escapeHtml(s.category || 'Jurisprudence')}</div>
+                        <div><strong>Citation / G.R.:</strong> ${escapeHtml(s.gr_no || s.law_no || 'N/A')}</div>
+                        <div><strong>Year / Date:</strong> ${escapeHtml(s.date || s.year || s.extracted_year || 'N/A')}</div>
+                        <div><strong>Ponente:</strong> ${escapeHtml(s.ponente || 'En Banc / Division')}</div>
+                        <div><strong>Relevance Fidelity:</strong> ${s.score ? (s.score * 100).toFixed(1) + '%' : '100%'}</div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        ${externalLinks.join('')}
+                    </div>
+                </div>
+
+                ${s.summary ? `
+                    <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-xs text-amber-950 leading-relaxed space-y-1">
+                        <strong class="font-serif text-amber-900 font-bold block text-sm">Official Doctrine / Statutory Syllabus:</strong>
+                        <p>${escapeHtml(s.summary)}</p>
+                    </div>
+                ` : ''}
+
+                ${s.text ? `
+                    <div class="bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-mono font-bold text-amber-400 uppercase tracking-wider">Verbatim Court Excerpt / Statutory Body:</span>
+                            <button onclick="navigator.clipboard.writeText(currentDrawerAuthorities[${idx}].text).then(() => alert('Excerpt copied!'))" class="text-[11px] font-mono text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer">
+                                <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                            </button>
+                        </div>
+                        <div class="font-mono text-xs leading-relaxed max-h-96 overflow-y-auto whitespace-pre-wrap custom-scroll p-3 bg-slate-900 rounded-xl border border-slate-800">${escapeHtml(s.text)}</div>
+                    </div>
+                ` : ''}
+            `;
+            lucide.createIcons();
+        }
+
+        // =============================================================
+        // RESEARCH TO PLEADING BRIDGE
+        // =============================================================
+        function transferResearchToPleading(turnIdx) {
+            const turn = sessionTurns[turnIdx];
+            if (!turn) return;
+
+            // Switch workspace mode to drafting
+            switchWorkspaceMode('drafting');
+
+            // Ensure form template is loaded
+            const templateSelect = document.getElementById('draftingTemplateSelect');
+            if (templateSelect) {
+                onSelectDraftingTemplate();
+            }
+
+            // Populate relevant fields in drafting studio based on research turn
+            setTimeout(() => {
+                const groundsEl = document.getElementById('df_grounds') || document.getElementById('df_specific_questions');
+                const factsEl = document.getElementById('df_facts_summary') || document.getElementById('df_rebuttal_points') || document.getElementById('df_factual_background') || document.getElementById('df_facts');
+                const matterEl = document.getElementById('df_matter_title') || document.getElementById('df_petitioner');
+
+                if (groundsEl && !groundsEl.value.trim()) {
+                    groundsEl.value = `Issue arising from research inquiry: "${turn.userQuery}"`;
+                }
+
+                if (factsEl && !factsEl.value.trim()) {
+                    let excerpt = turn.tab1Response || turn.assistantResponse || '';
+                    if (excerpt.length > 1200) excerpt = excerpt.substring(0, 1200) + '...';
+                    factsEl.value = `Synthesized Legal Background & Research Findings:\n${excerpt}`;
+                }
+
+                if (matterEl && !matterEl.value.trim()) {
+                    matterEl.value = turn.userQuery.length > 60 ? turn.userQuery.substring(0, 57) + '...' : turn.userQuery;
+                }
+            }, 100);
         }
 
         function escapeHtml(string) {
